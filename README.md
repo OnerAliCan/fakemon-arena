@@ -1,5 +1,7 @@
 # Fakemon Arena
 
+[![CI](https://github.com/OnerAliCan/fakemon-arena/actions/workflows/ci.yml/badge.svg)](https://github.com/OnerAliCan/fakemon-arena/actions/workflows/ci.yml)
+
 Combats de fakemon au tour par tour, façon Pokémon Showdown : deux équipes tirées au hasard parmi
 30 fakemon originaux s'affrontent. Projet Epitech en Java 21 et JavaFX.
 
