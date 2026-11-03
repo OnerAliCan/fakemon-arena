@@ -64,7 +64,7 @@ end note
 
 note right of valider
   Refusée si : nom déjà pris,
-  stats ≠ 320, moins de 4 attaques,
+  stats > 600, moins de 4 attaques,
   sprite de face ou cri manquant.
 end note
 @enduml

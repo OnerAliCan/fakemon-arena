@@ -65,7 +65,7 @@ Toutes les maquettes sont à la taille de la fenêtre du jeu, **960 × 540**, av
 
 - **En haut à droite**, le fakemon adverse, vu de face ; **en bas à gauche**, celui du joueur, vu de dos et un peu plus grand.
 - Chaque fakemon a un encart : nom, types, objet, barre de PV et PV restants. La barre passe du **vert** à l'**orange** sous 50 %, puis au **rouge** sous 20 %.
-- **Les 4 attaques** sont des boutons à la couleur de leur type, avec la puissance, la précision et la mention « rapide » pour la priorité +1.
+- **Les 4 attaques** sont des boutons à la couleur de leur type, avec la catégorie (physique ou spéciale), la puissance, la précision et la mention « rapide » pour la priorité +1.
 - **Le journal** affiche le tour en cours : qui attaque, l'efficacité, les dégâts.
 - **Les pastilles** résument l'équipe : jaune pour le fakemon en jeu, vert pour les fakemon debout, gris pour les KO.
 - **Équipe** ouvre le panneau d'équipe pour changer de fakemon, ce qui consomme le tour.
@@ -93,11 +93,11 @@ Toutes les maquettes sont à la taille de la fenêtre du jeu, **960 × 540**, av
 
 - **Nom d'origine** et **nom français** : obligatoires, et uniques dans le roster.
 - **Types :** un ou deux, choisis parmi les 10.
-- **Statistiques :** 4 curseurs entre 50 et 120, avec le total affiché en direct ; il doit valoir exactement 320.
+- **Statistiques :** 6 curseurs entre 50 et 150, avec le total affiché en direct ; il ne doit pas dépasser 600.
 - **Sprites :** la face est obligatoire. Le dos est facultatif : sans dos, le jeu affiche la face retournée.
 - **Cri :** un fichier `.wav`, qu'on peut écouter avant d'enregistrer.
 - **Attaques disponibles :** au moins 4 attaques cochées dans la liste des 30.
-- **Enregistrer** reste grisé tant qu'une règle n'est pas respectée, et le message dit laquelle (en orange sur la maquette : il reste 5 points de stats à placer).
+- **Enregistrer** reste grisé tant qu'une règle n'est pas respectée, et le message dit laquelle (en orange sur la maquette : 5 points de stats en trop).
 - Le fakemon est enregistré dans le dossier utilisateur et rejoint le tirage dès le combat suivant (#22).
 
 ## 4. Direction artistique
@@ -123,7 +123,7 @@ Toutes les maquettes sont à la taille de la fenêtre du jeu, **960 × 540**, av
 
 Chaque type a sa couleur, utilisée sur les étiquettes, les boutons d'attaque et les effets :
 
-| Feu | Eau | Sève | Foudre | Roche | Vent | Venin | Force | Ombre | Éther |
+| Feu | Eau | Nature | Foudre | Roche | Vent | Venin | Force | Ombre | Éther |
 |---|---|---|---|---|---|---|---|---|---|
 | `#E8603C` | `#3B8FE0` | `#4CAF50` | `#E9B824` | `#9C7B55` | `#6FB3DB` | `#9B59B6` | `#C0392B` | `#4A4560` | `#E07FC6` |
 

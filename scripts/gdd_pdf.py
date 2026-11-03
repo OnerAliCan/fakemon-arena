@@ -53,8 +53,9 @@ h2 .n { color: var(--muted); font-weight: 600; margin-right: 2mm; }
 h3 { font-size: 11pt; margin: 5mm 0 2mm; font-weight: 700; }
 h2, h3, h2 + p, h3 + p, p.intro { break-after: avoid; }
 p { margin: 0 0 2.5mm; }
-ul, ol { margin: 0 0 2.5mm; padding-left: 5mm; break-inside: avoid; }
-li { margin-bottom: 1mm; }
+ul, ol { margin: 0 0 2.5mm; padding-left: 5mm; }
+.court { break-inside: avoid; }
+li { margin-bottom: 1mm; break-inside: avoid; }
 li > ul, li > ol { margin: 1mm 0 0; }
 a { color: inherit; text-decoration-color: var(--base); }
 code { font-family: 'Cascadia Mono', Consolas, Menlo, monospace; font-size: 8.4pt; }
@@ -137,8 +138,9 @@ def table(rows):
 
 
 def bullets(items):
-    """Listes à puces ou numérotées, imbriquées selon l'indentation."""
+    """Listes à puces ou numérotées, imbriquées selon l'indentation. Une liste courte n'est pas coupée entre deux pages."""
     out, stack = [], []
+    keep = ' class="court"' if len(items) <= 4 else ""
     for indent, ordered, text in items:
         tag = "ol" if ordered else "ul"
         while stack and indent < stack[-1][0]:
@@ -146,8 +148,8 @@ def bullets(items):
         if stack and indent == stack[-1][0]:
             out.append("</li>")
         else:
+            out.append(f"<{tag}{'' if stack else keep}>")
             stack.append((indent, tag))
-            out.append(f"<{tag}>")
         out.append(f"<li>{inline(text)}")
     while stack:
         out.append(f"</li></{stack.pop()[1]}>")
