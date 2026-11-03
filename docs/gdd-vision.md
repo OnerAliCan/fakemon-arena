@@ -14,28 +14,29 @@ Les règles du combat (types, dégâts, talents, objets, roster) sont dans [gdd-
 ### Les quatre piliers
 
 1. **Chaque tour compte.** Les types, la priorité et le changement de fakemon donnent un vrai choix à chaque tour, jamais un clic automatique.
-2. **Jamais la même partie.** Le tirage des équipes change tout : il faut s'adapter à l'équipe qu'on reçoit.
+2. **Jamais la même partie.** Le tirage des équipes change tout : on les découvre au début du combat, et il faut s'adapter à celle qu'on reçoit.
 3. **Tout se lit d'un coup d'œil.** Couleurs des types, barres de PV et journal de combat : le joueur comprend toujours ce qui vient de se passer.
 4. **Le roster grandit.** Le dashboard permet d'ajouter ses propres fakemon sans toucher au code.
 
 ## 2. Boucle de jeu
 
 ```
-Menu ──▶ Tirage ──▶ Aperçu des équipes ──▶ Combat ──▶ Fin de combat
-            ▲              │                 ▲  │          │
-            └─ Nouveau ────┘                 │  ▼          ├─▶ Revanche (mêmes équipes)
-               tirage                 Panneau d'équipe     ├─▶ Nouveau tirage
-                                       (changement, KO)    └─▶ Menu
+Menu ──▶ Tirage ──▶ Combat ──▶ Fin de combat
+           ▲         ▲  │        │
+           │         │  ▼        ├─▶ Revanche ─┐
+           │  Panneau d'équipe   └─▶ Menu      │
+           │  (changement, KO)                 │
+           └───────────────────────────────────┘
+Menu ──▶ Choix de l'équipe ──▶ Combat         (bonus)
 Menu ──▶ Dashboard ──▶ Menu
 ```
 
-1. **Menu :** le joueur lance un combat, ajoute un fakemon ou règle le volume.
-2. **Tirage :** le jeu tire deux équipes de 6, chacun avec 4 attaques et un objet.
-3. **Aperçu :** le joueur découvre les deux équipes. Il peut relancer le tirage autant qu'il veut, puis lance le combat.
-4. **Combat :** à chaque tour, il choisit une attaque ou un changement ; le tour se résout et s'affiche dans le journal.
-5. **Fin :** victoire ou défaite, quelques chiffres, puis revanche, nouveau tirage ou retour au menu.
+1. **Menu :** le joueur lance un combat aléatoire ou, en bonus, un combat avec son équipe ; il peut aussi ajouter un fakemon ou régler le volume.
+2. **Tirage :** le jeu tire deux équipes de 6, chaque fakemon avec 4 attaques et un objet. Pas d'aperçu ni de nouveau tirage : le joueur découvre les équipes au moment où le combat commence.
+3. **Combat :** à chaque tour, il choisit une attaque ou un changement ; le tour se résout et s'affiche dans le journal.
+4. **Fin :** victoire ou défaite, quelques chiffres, puis revanche ou retour au menu.
 
-La navigation détaillée entre les écrans est modélisée dans `docs/uml/navigation.puml` (#5).
+La navigation entre les écrans est modélisée dans `docs/uml/navigation.puml`, et le déroulement d'un tour dans `docs/uml/combat.puml` (#5).
 
 ## 3. Les écrans
 
@@ -45,24 +46,18 @@ Toutes les maquettes sont à la taille de la fenêtre du jeu, **960 × 540**, av
 
 ![Menu principal](maquettes/1-menu.png)
 
-- **Nouveau combat** lance le tirage.
+- **Combat aléatoire** tire les deux équipes et lance directement le combat.
+- **Combat avec mon équipe** (bonus) ouvre le choix de l'équipe : le joueur choisit 6 fakemon parmi les 30, leurs attaques et leur objet sont tirés au hasard, et l'ordinateur reçoit une équipe aléatoire. Tant que le bonus n'est pas fait, le bouton n'apparaît pas.
 - **Ajouter un fakemon** ouvre le dashboard.
 - **Options** ouvre une petite fenêtre avec deux curseurs de volume, musique et effets (pas de maquette).
 - **Quitter** ferme le jeu.
 - Quelques fakemon du roster décorent l'écran.
 
-### Aperçu des équipes
-
-![Aperçu des équipes](maquettes/2-apercu-equipes.png)
-
-- Les deux équipes côte à côte, 6 contre 6 : sprite, nom, types et objet de chaque fakemon.
-- **Nouveau tirage** relance le tirage ; **Combattre !** lance le combat ; **Retour** revient au menu.
-- La graine du tirage est affichée : elle permet de rejouer exactement le même combat.
-
 ### Combat
 
-![Combat](maquettes/3-combat.png)
+![Combat](maquettes/2-combat.png)
 
+- **Les équipes se découvrent ici :** au premier tour, chaque camp envoie son premier fakemon ; le bouton **Équipe** montre les 6 fakemon du joueur.
 - **En haut à droite**, le fakemon adverse, vu de face ; **en bas à gauche**, celui du joueur, vu de dos et un peu plus grand.
 - Chaque fakemon a un encart : nom, types, objet, barre de PV et PV restants. La barre passe du **vert** à l'**orange** sous 50 %, puis au **rouge** sous 20 %.
 - **Les 4 attaques** sont des boutons à la couleur de leur type, avec la catégorie (physique ou spéciale), la puissance, la précision et la mention « rapide » pour la priorité +1.
@@ -73,7 +68,7 @@ Toutes les maquettes sont à la taille de la fenêtre du jeu, **960 × 540**, av
 
 ### Panneau d'équipe
 
-![Panneau d'équipe](maquettes/4-panneau-equipe.png)
+![Panneau d'équipe](maquettes/3-panneau-equipe.png)
 
 - La liste des 6 fakemon, avec leurs PV ; les fakemon KO sont grisés et ne peuvent pas être envoyés.
 - **Changement volontaire :** un bouton Retour permet d'annuler et de revenir au choix d'attaque.
@@ -81,15 +76,15 @@ Toutes les maquettes sont à la taille de la fenêtre du jeu, **960 × 540**, av
 
 ### Fin de combat
 
-![Fin de combat](maquettes/5-fin-combat.png)
+![Fin de combat](maquettes/4-fin-combat.png)
 
 - **Victoire !** ou **Défaite**, avec l'équipe du joueur : les fakemon KO sont grisés.
 - Quelques chiffres : nombre de tours, KO infligés et subis, meilleur fakemon.
-- **Revanche** relance un combat avec les mêmes équipes ; **Nouveau tirage** repasse par l'aperçu ; **Menu** revient au menu.
+- **Revanche** lance un nouveau combat dans le même mode : deux nouvelles équipes en combat aléatoire ; la même équipe du joueur, contre une nouvelle équipe de l'ordinateur, en combat avec mon équipe. **Menu** revient au menu.
 
 ### Dashboard : ajouter un fakemon
 
-![Dashboard](maquettes/6-dashboard.png)
+![Dashboard](maquettes/5-dashboard.png)
 
 - **Nom d'origine** et **nom français** : obligatoires, et uniques dans le roster.
 - **Types :** un ou deux, choisis parmi les 10.
@@ -136,7 +131,7 @@ Chaque type a sa couleur, utilisée sur les étiquettes, les boutons d'attaque e
 
 | Son | Quand | Source |
 |---|---|---|
-| **Musique du menu** | menu, aperçu, dashboard | musique libre de droits (CC0 ou CC-BY), par exemple sur OpenGameArt |
+| **Musique du menu** | menu, dashboard | musique libre de droits (CC0 ou CC-BY), par exemple sur OpenGameArt |
 | **Musique de combat** | pendant le combat | idem |
 | **Jingles** | victoire, défaite | idem |
 | **Effets** | clic, attaque, super efficace, critique, attaque ratée, KO, soin, entrée en jeu | générés avec [jsfxr](https://sfxr.me) |
@@ -150,6 +145,7 @@ Chaque type a sa couleur, utilisée sur les étiquettes, les boutons d'attaque e
 
 Prévu seulement si du temps se libère (milestone Bonus) :
 
+- **Combat avec mon équipe** : un écran pour choisir ses 6 fakemon parmi les 30 avant le combat, accessible depuis le menu ;
 - **Combat en réseau local** contre un autre joueur, après le Go / No-Go du lundi 16 novembre (#34, #35) ;
 - **Statuts** : brûlure, poison, paralysie (#32) ;
 - **IA heuristique**, qui choisit l'attaque la plus forte (#33).

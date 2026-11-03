@@ -12,37 +12,26 @@ hide empty description
 state "Menu principal" as Menu
 state "Options\n(volume)" as Options
 state "Dashboard\n(ajouter un fakemon)" as Dashboard
-state "Aperçu des équipes" as Apercu
+state "Choix de l'équipe\n(bonus)" as ChoixEquipe
+state "Combat" as Combat
 state "Fin de combat" as Fin
 
-state "Combat" as Combat {
-  state "Choix de l'action" as Choix
-  state "Résolution du tour\n(animations, journal)" as Resolution
-  state "Panneau d'équipe" as Panneau
-  state "Remplacement forcé\n(panneau sans Retour)" as Remplacement
-
-  [*] --> Choix
-  Choix --> Resolution : clic sur une attaque
-  Choix --> Panneau : bouton Équipe
-  Panneau --> Choix : Retour
-  Panneau --> Resolution : Envoyer
-  Resolution --> Choix : tour terminé
-  Resolution --> Remplacement : fakemon du joueur KO
-  Remplacement --> Choix : Envoyer
-}
-
 [*] --> Menu
-Menu --> Apercu : Nouveau combat\n(tirage)
-Apercu --> Apercu : Nouveau tirage
-Apercu --> Menu : Retour
-Apercu --> Combat : Combattre !
-Combat --> Fin : un camp n'a plus\nde fakemon debout
-Fin --> Combat : Revanche\n(mêmes équipes)
-Fin --> Apercu : Nouveau tirage
-Fin --> Menu : Menu
-Menu --> Dashboard : Ajouter un fakemon
-Dashboard --> Menu : Enregistrer / Annuler
 Menu --> Options : Options
 Options --> Menu : Fermer
+Menu --> Dashboard : Ajouter un fakemon
+Dashboard --> Menu : Enregistrer\nou Annuler
+Menu --> ChoixEquipe : Combat avec\nmon équipe
+ChoixEquipe --> Menu : Retour
+ChoixEquipe --> Combat : Combattre !
+Menu --> Combat : Combat aléatoire
+Combat --> Fin : un camp n'a plus\nde fakemon debout
+Fin --> Combat : Revanche
+Fin --> Menu : Menu
 Menu --> [*] : Quitter
+
+note right of Combat
+  Le déroulement d'un tour
+  est détaillé dans combat.puml.
+end note
 @enduml

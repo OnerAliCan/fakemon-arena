@@ -6,10 +6,13 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 |---|---|---|
 | Cas d'utilisation | [cas-utilisation.puml](cas-utilisation.puml) | #5 |
 | Navigation entre les écrans | [navigation.puml](navigation.puml) | #5 |
+| Écran de combat : déroulement d'un tour | [combat.puml](combat.puml) | #5 |
 
 ![Cas d'utilisation](cas-utilisation.png)
 
 ![Navigation entre les écrans](navigation.png)
+
+![Écran de combat](combat.png)
 
 ## Régénérer les PNG
 

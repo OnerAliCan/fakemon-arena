@@ -1,0 +1,26 @@
+@startuml combat
+!pragma layout smetana
+title Fakemon Arena · écran de combat, déroulement d'un tour (v1)
+skinparam defaultFontName Segoe UI
+skinparam state {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+  ArrowColor #3A4170
+}
+hide empty description
+
+state "Choix de l'action" as Choix
+state "Panneau d'équipe\n(avec Retour)" as Panneau
+state "Résolution du tour\n(animations, journal)" as Resolution
+state "Remplacement forcé\n(panneau sans Retour)" as Remplacement
+
+[*] --> Choix
+Choix --> Resolution : clic sur une attaque
+Choix --> Panneau : bouton Équipe
+Panneau --> Choix : Retour
+Panneau --> Resolution : Envoyer
+Resolution --> Choix : tour terminé
+Resolution --> Remplacement : fakemon du joueur KO
+Remplacement --> Choix : Envoyer
+Resolution --> [*] : un camp n'a plus\nde fakemon debout
+@enduml

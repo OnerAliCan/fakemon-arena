@@ -16,22 +16,23 @@ skinparam rectangle {
 actor "Joueur" as joueur
 actor "Ordinateur" as ia
 
+' Les étapes sont déclarées de la dernière à la première : smetana les dessine de bas en haut.
 rectangle "Fakemon Arena" {
   usecase "Jouer contre l'ordinateur" as jouer
-  usecase "Tirer les équipes" as tirer
-  usecase "Relancer le tirage" as relancer
-  usecase "Jouer un tour" as tour
+  usecase "3. Voir le résultat\n(victoire ou défaite)" as resultat
+  usecase "2. Jouer un tour\n(jusqu'à la fin du combat)" as tour
   usecase "Attaquer" as attaquer
   usecase "Changer de fakemon" as changer
   usecase "Remplacer un fakemon KO" as remplacer
-  usecase "Voir le résultat\net rejouer" as resultat
+  usecase "Choisir son équipe\n(bonus)" as choisir
+  usecase "1. Tirer les équipes" as tirer
 
   usecase "Ajouter un fakemon" as ajouter
-  usecase "Saisir les noms,\ntypes et stats" as saisir
-  usecase "Choisir les sprites\n(face, dos facultatif)" as sprites
-  usecase "Choisir le cri" as cri
-  usecase "Choisir les attaques\ndisponibles" as attaques
   usecase "Valider et enregistrer\nla fiche" as valider
+  usecase "Choisir les attaques\ndisponibles" as attaques
+  usecase "Choisir le cri" as cri
+  usecase "Choisir les sprites\n(face, dos facultatif)" as sprites
+  usecase "Saisir les noms,\ntypes et stats" as saisir
 
   usecase "Régler le volume" as volume
 }
@@ -40,21 +41,21 @@ joueur --> jouer
 joueur --> ajouter
 joueur --> volume
 
-jouer ..> tirer : <<include>>
-jouer ..> tour : <<include>>
 jouer ..> resultat : <<include>>
-relancer ..> tirer : <<extend>>
-attaquer --|> tour
-changer --|> tour
-remplacer ..> tour : <<extend>>\nsi le fakemon est KO
+jouer ..> tour : <<include>>
+jouer <.. choisir : <<extend>>\nmode avec mon équipe
+jouer ..> tirer : <<include>>
+tour <|-- attaquer
+tour <|-- changer
+tour <.. remplacer : <<extend>>\nsi le fakemon est KO
 
 tour -- ia
 
-ajouter ..> saisir : <<include>>
-ajouter ..> sprites : <<include>>
-ajouter ..> cri : <<include>>
-ajouter ..> attaques : <<include>>
 ajouter ..> valider : <<include>>
+ajouter ..> attaques : <<include>>
+ajouter ..> cri : <<include>>
+ajouter ..> sprites : <<include>>
+ajouter ..> saisir : <<include>>
 
 note bottom of ia
   Choisit son action à chaque tour

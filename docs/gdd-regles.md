@@ -8,7 +8,7 @@ L'expérience joueur, les écrans et la direction artistique sont dans [gdd-visi
 ## 1. Le combat en bref
 
 - Deux équipes de **6 fakemon** s'affrontent : le joueur contre l'ordinateur.
-- Les équipes sont **tirées au hasard** parmi les 30 fakemon du roster, sans doublon (12 fakemon différents par combat).
+- Les équipes sont **tirées au hasard** parmi les 30 fakemon du roster, sans doublon (12 fakemon différents par combat). En bonus, le mode « Combat avec mon équipe » laisse le joueur choisir ses 6 fakemon (voir [gdd-vision.md](gdd-vision.md)).
 - Chaque fakemon a **4 attaques**, tirées dans la liste des attaques qu'il peut apprendre, un **talent** fixe et un **objet** tiré au hasard.
 - Un seul fakemon par camp est en jeu à la fois. À chaque tour, chaque camp choisit **une action** : attaquer ou changer de fakemon.
 - Un camp **perd** quand ses 6 fakemon sont KO.
