@@ -1,0 +1,20 @@
+# Build Maven
+target/
+
+# IDE
+.idea/
+*.iml
+out/
+bin/
+.classpath
+.project
+.settings/
+.vscode/*
+!.vscode/extensions.json
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Scripts Python
+__pycache__/
