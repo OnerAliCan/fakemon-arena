@@ -1,6 +1,5 @@
 @startuml cas-utilisation
 !pragma layout smetana
-title Fakemon Arena · cas d'utilisation (v1)
 left to right direction
 skinparam actorStyle awesome
 skinparam defaultFontName Segoe UI
@@ -12,60 +11,28 @@ skinparam rectangle {
   BorderColor #3A4170
   BackgroundColor #FAFAFD
 }
+title Fakemon Arena · cas d'utilisation, vue d'ensemble (v1)
 
 actor "Joueur" as joueur
 actor "Ordinateur" as ia
+actor "Adversaire en ligne\n(bonus)" as adv
 
-' Les étapes sont déclarées de la dernière à la première : smetana les dessine de bas en haut.
 rectangle "Fakemon Arena" {
-  usecase "Jouer contre l'ordinateur" as jouer
-  usecase "3. Voir le résultat\n(victoire ou défaite)" as resultat
-  usecase "2. Jouer un tour\n(jusqu'à la fin du combat)" as tour
-  usecase "Attaquer" as attaquer
-  usecase "Changer de fakemon" as changer
-  usecase "Remplacer un fakemon KO" as remplacer
-  usecase "Choisir son équipe\n(bonus)" as choisir
-  usecase "1. Tirer les équipes" as tirer
-
-  usecase "Ajouter un fakemon" as ajouter
-  usecase "Valider et enregistrer\nla fiche" as valider
-  usecase "Choisir les attaques\ndisponibles" as attaques
-  usecase "Choisir le cri" as cri
-  usecase "Choisir les sprites\n(face, dos facultatif)" as sprites
-  usecase "Saisir les noms,\ntypes et stats" as saisir
-
-  usecase "Régler le volume" as volume
+  usecase "Jouer un combat\nen ligne (bonus)" as jouerLigne
+  usecase "Jouer un combat\ncontre l'IA" as jouerIA
+  usecase "Consulter le Mondex" as mondex
+  usecase "Ajouter un Mon" as ajouter
 }
 
-joueur --> jouer
+joueur --> jouerLigne
+joueur --> jouerIA
+joueur --> mondex
 joueur --> ajouter
-joueur --> volume
+jouerIA -- ia
+jouerLigne -- adv
 
-jouer ..> resultat : <<include>>
-jouer ..> tour : <<include>>
-jouer <.. choisir : <<extend>>\nmode avec mon équipe
-jouer ..> tirer : <<include>>
-tour <|-- attaquer
-tour <|-- changer
-tour <.. remplacer : <<extend>>\nsi le fakemon est KO
-
-tour -- ia
-
-ajouter ..> valider : <<include>>
-ajouter ..> attaques : <<include>>
-ajouter ..> cri : <<include>>
-ajouter ..> sprites : <<include>>
-ajouter ..> saisir : <<include>>
-
-note bottom of ia
-  Choisit son action à chaque tour
-  (AiController.chooseAction)
-  et remplace ses fakemon KO.
-end note
-
-note right of valider
-  Refusée si : nom déjà pris,
-  stats > 600, moins de 4 attaques,
-  sprite de face ou cri manquant.
+note as detail
+  Le détail de chaque cas est dans
+  son propre diagramme (cu-*.puml).
 end note
 @enduml

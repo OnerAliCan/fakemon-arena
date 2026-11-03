@@ -1,0 +1,20 @@
+@startuml mondex
+!pragma layout smetana
+title Fakemon Arena · Mondex (v1)
+skinparam defaultFontName Segoe UI
+skinparam state {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+  ArrowColor #3A4170
+}
+hide empty description
+
+state "Menu principal" as Menu
+state "Mondex" as Mondex : liste des mons avec leur nom,\nde 1 à 30 puis les mons ajoutés
+state "Détails du Mon" as Details : noms français et d'origine, sprite de face,\ntypes, 6 stats, talent, cri à écouter,\nconcept, designer
+
+Menu --> Mondex : Mondex
+Mondex --> Details : clic sur un mon
+Details --> Mondex : Échap ou Retour
+Mondex --> Menu : Échap ou Retour
+@enduml

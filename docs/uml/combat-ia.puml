@@ -1,0 +1,27 @@
+@startuml combat-ia
+!pragma layout smetana
+title Fakemon Arena · combat contre l'IA (v1)
+skinparam defaultFontName Segoe UI
+skinparam state {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+  ArrowColor #3A4170
+}
+hide empty description
+
+state "Menu principal" as Menu
+state "Combat contre l'IA" as IA : Combat construit\nCombat aléatoire\nRetour au menu principal
+state "Choisissez vos fakemon\n(bonus)" as Choix : cartes des mons, un clic ajoute,\nun deuxième clic retire
+state "Combat" as Combat : voir combat.puml
+state "Fin de combat" as Fin : Victoire ou Défaite, chiffres du combat
+
+Menu --> IA : Combat contre l'IA
+IA --> Combat : Combat aléatoire\n(tout est tiré au hasard)
+IA --> Choix : Combat construit
+Choix --> Combat : Valider\n(actif à 6 mons)
+Choix --> IA : Échap ou Retour
+IA --> Menu : Retour au menu principal\nou Échap
+Combat --> Fin : un camp n'a plus de mon\ndebout, ou Abandonner
+Fin --> Combat : Revanche\n(même mode)
+Fin --> Menu : Menu
+@enduml
