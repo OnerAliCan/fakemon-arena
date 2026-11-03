@@ -1,0 +1,37 @@
+@startuml navigation
+!pragma layout smetana
+title Fakemon Arena · navigation entre les écrans (v1)
+skinparam defaultFontName Segoe UI
+skinparam state {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+  ArrowColor #3A4170
+}
+hide empty description
+
+state "Menu principal" as Menu
+state "Options\n(volume)" as Options
+state "Dashboard\n(ajouter un fakemon)" as Dashboard
+state "Choix de l'équipe\n(bonus)" as ChoixEquipe
+state "Combat" as Combat
+state "Fin de combat" as Fin
+
+[*] --> Menu
+Menu --> Options : Options
+Options --> Menu : Fermer
+Menu --> Dashboard : Ajouter un fakemon
+Dashboard --> Menu : Enregistrer\nou Annuler
+Menu --> ChoixEquipe : Combat avec\nmon équipe
+ChoixEquipe --> Menu : Retour
+ChoixEquipe --> Combat : Combattre !
+Menu --> Combat : Combat aléatoire
+Combat --> Fin : un camp n'a plus\nde fakemon debout
+Fin --> Combat : Revanche
+Fin --> Menu : Menu
+Menu --> [*] : Quitter
+
+note right of Combat
+  Le déroulement d'un tour
+  est détaillé dans combat.puml.
+end note
+@enduml
