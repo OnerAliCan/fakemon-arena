@@ -1,6 +1,6 @@
 @startuml navigation
 !pragma layout smetana
-title Fakemon Arena · navigation entre les écrans (v1)
+title Fakemon Arena · menu principal (v1)
 skinparam defaultFontName Segoe UI
 skinparam state {
   BackgroundColor #FFF6D6
@@ -10,28 +10,27 @@ skinparam state {
 hide empty description
 
 state "Menu principal" as Menu
-state "Options\n(volume)" as Options
-state "Dashboard\n(ajouter un fakemon)" as Dashboard
-state "Choix de l'équipe\n(bonus)" as ChoixEquipe
-state "Combat" as Combat
-state "Fin de combat" as Fin
+state "Combat en ligne\n(bonus)" as Ligne : voir combat-en-ligne.puml
+state "Combat contre l'IA" as IA : voir combat-ia.puml
+state "Mondex" as Mondex : voir mondex.puml
+state "Ajouter un Mon" as Ajouter : voir ajouter-un-mon.puml
+state "Options" as Options : volume de la musique\net des effets
+state "Crédits" as Credits
 
 [*] --> Menu
-Menu --> Options : Options
-Options --> Menu : Fermer
-Menu --> Dashboard : Ajouter un fakemon
-Dashboard --> Menu : Enregistrer\nou Annuler
-Menu --> ChoixEquipe : Combat avec\nmon équipe
-ChoixEquipe --> Menu : Retour
-ChoixEquipe --> Combat : Combattre !
-Menu --> Combat : Combat aléatoire
-Combat --> Fin : un camp n'a plus\nde fakemon debout
-Fin --> Combat : Revanche
-Fin --> Menu : Menu
+Menu --> Ligne
+Menu --> IA
+Menu --> Mondex
+Menu --> Ajouter
+Menu --> Options
+Menu --> Credits
 Menu --> [*] : Quitter
 
-note right of Combat
-  Le déroulement d'un tour
-  est détaillé dans combat.puml.
+note right of Menu
+  Boutons, dans l'ordre : Combat en ligne,
+  Combat contre l'IA, Mondex, Ajouter un Mon,
+  Options, Crédits, Quitter.
+  Sur chaque écran, Échap ou Retour
+  ramène à l'écran précédent.
 end note
 @enduml

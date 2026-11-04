@@ -8,10 +8,11 @@ L'expérience joueur, les écrans et la direction artistique sont dans [gdd-visi
 ## 1. Le combat en bref
 
 - Deux équipes de **6 fakemon** s'affrontent : le joueur contre l'ordinateur.
-- Les équipes sont **tirées au hasard** parmi les 30 fakemon du roster, sans doublon (12 fakemon différents par combat). En bonus, le mode « Combat avec mon équipe » laisse le joueur choisir ses 6 fakemon (voir [gdd-vision.md](gdd-vision.md)).
+- Les équipes sont **tirées au hasard** parmi les 30 fakemon du roster, sans doublon (12 fakemon différents par combat). En bonus, le mode « Combat construit » laisse le joueur choisir ses 6 fakemon (voir [gdd-vision.md](gdd-vision.md)).
 - Chaque fakemon a **4 attaques**, tirées dans la liste des attaques qu'il peut apprendre, un **talent** fixe et un **objet** tiré au hasard.
 - Un seul fakemon par camp est en jeu à la fois. À chaque tour, chaque camp choisit **une action** : attaquer ou changer de fakemon.
-- Un camp **perd** quand ses 6 fakemon sont KO.
+- Au début du combat, chaque camp envoie un premier fakemon : tiré au hasard en combat aléatoire, choisi par le joueur en combat construit.
+- Un camp **perd** quand ses 6 fakemon sont KO, ou quand le joueur abandonne depuis la pause.
 
 Pas de niveaux, pas d'expérience, pas de PP : chaque combat repart de zéro.
 
@@ -182,7 +183,7 @@ Chaque fakemon a **un talent**, fixé dans le roster. Quatre talents, un par mom
 | **Dernier souffle** | dégâts infligés | sous un tiers de ses PV max, ses attaques font 50 % de dégâts en plus. |
 | **Récupération** | fin de tour | récupère 10 % de ses PV max, sans dépasser le maximum. |
 
-Les fakemon créés avec le dashboard n'ont pas de talent.
+Les fakemon créés avec Ajouter un Mon choisissent obligatoirement l'un de ces 4 talents.
 
 ## 8. Objets tenus
 

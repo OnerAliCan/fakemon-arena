@@ -1,0 +1,47 @@
+@startuml combat-en-ligne
+!pragma layout smetana
+title Fakemon Arena · combat en ligne, bonus (v1)
+skinparam defaultFontName Segoe UI
+skinparam state {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+  ArrowColor #3A4170
+}
+hide empty description
+
+state "Menu principal" as Menu
+state "Combat en ligne" as Ligne : Héberger\nRejoindre\nRetour au menu principal
+state "Rejoindre" as Rejoindre : champ pour l'IP de l'hôte
+state "Lobby" as Lobby : hôte à gauche, avec son IP\ninvité à droite, bouton Prêt\nl'hôte choisit aléatoire ou construit
+state "Choisissez vos fakemon" as Choix
+state "Combat" as Combat : voir combat.puml
+state "Fin de combat" as Fin
+
+Menu --> Ligne : Combat en ligne
+Ligne --> Lobby : Héberger
+Ligne --> Rejoindre : Rejoindre
+Rejoindre --> Lobby : Rejoindre\n(connexion réussie)
+Rejoindre --> Rejoindre : IP fausse ou personne :\nmessage d'erreur
+Rejoindre --> Ligne : Échap ou Retour
+Lobby --> Ligne : Échap ou Retour
+Ligne --> Menu : Retour au menu principal\nou Échap
+Lobby --> Combat : l'invité est prêt,\nl'hôte lance en aléatoire
+Lobby --> Choix : l'invité est prêt,\nl'hôte lance en construit
+Choix --> Combat : les deux joueurs\nont validé
+Combat --> Fin : un camp n'a plus de mon\ndebout, ou Abandonner
+Combat --> Menu : Connexion perdue
+Fin --> Combat : Revanche\n(les deux joueurs cliquent)
+Fin --> Menu : Menu
+
+note bottom of Lobby
+  Si l'invité part, sa place redevient vide.
+  Si l'hôte part, l'invité voit « L'hôte a quitté
+  la partie » et revient au menu principal.
+end note
+
+note right of Fin
+  Si un joueur clique sur Menu, l'autre voit
+  « L'adversaire a quitté la partie »
+  et revient au menu principal.
+end note
+@enduml

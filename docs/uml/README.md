@@ -4,15 +4,39 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 
 | Diagramme | Source | Issue |
 |---|---|---|
-| Cas d'utilisation | [cas-utilisation.puml](cas-utilisation.puml) | #5 |
-| Navigation entre les écrans | [navigation.puml](navigation.puml) | #5 |
-| Écran de combat : déroulement d'un tour | [combat.puml](combat.puml) | #5 |
+| Cas d'utilisation : vue d'ensemble | [cas-utilisation.puml](cas-utilisation.puml) | #5 |
+| Cas d'utilisation : combat contre l'IA | [cu-combat-ia.puml](cu-combat-ia.puml) | #5 |
+| Cas d'utilisation : combat en ligne (bonus) | [cu-combat-en-ligne.puml](cu-combat-en-ligne.puml) | #5 |
+| Cas d'utilisation : Mondex | [cu-mondex.puml](cu-mondex.puml) | #5 |
+| Cas d'utilisation : Ajouter un Mon | [cu-ajouter-un-mon.puml](cu-ajouter-un-mon.puml) | #5 |
+| Navigation : menu principal | [navigation.puml](navigation.puml) | #5 |
+| Navigation : combat contre l'IA | [combat-ia.puml](combat-ia.puml) | #5 |
+| Navigation : combat en ligne (bonus) | [combat-en-ligne.puml](combat-en-ligne.puml) | #5 |
+| Navigation : écran de combat | [combat.puml](combat.puml) | #5 |
+| Navigation : Mondex | [mondex.puml](mondex.puml) | #5 |
+| Navigation : Ajouter un Mon | [ajouter-un-mon.puml](ajouter-un-mon.puml) | #5 |
 
-![Cas d'utilisation](cas-utilisation.png)
+![Cas d'utilisation, vue d'ensemble](cas-utilisation.png)
 
-![Navigation entre les écrans](navigation.png)
+![Cas d'utilisation, combat contre l'IA](cu-combat-ia.png)
+
+![Cas d'utilisation, combat en ligne](cu-combat-en-ligne.png)
+
+![Cas d'utilisation, Mondex](cu-mondex.png)
+
+![Cas d'utilisation, Ajouter un Mon](cu-ajouter-un-mon.png)
+
+![Menu principal](navigation.png)
+
+![Combat contre l'IA](combat-ia.png)
+
+![Combat en ligne](combat-en-ligne.png)
 
 ![Écran de combat](combat.png)
+
+![Mondex](mondex.png)
+
+![Ajouter un Mon](ajouter-un-mon.png)
 
 ## Régénérer les PNG
 

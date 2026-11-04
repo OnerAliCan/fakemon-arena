@@ -1,0 +1,27 @@
+@startuml cu-mondex
+!pragma layout smetana
+left to right direction
+skinparam actorStyle awesome
+skinparam defaultFontName Segoe UI
+skinparam usecase {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+}
+skinparam rectangle {
+  BorderColor #3A4170
+  BackgroundColor #FAFAFD
+}
+title Fakemon Arena · cas d'utilisation, Mondex (v1)
+
+actor "Joueur" as joueur
+
+rectangle "Consulter le Mondex" {
+  usecase "Consulter le Mondex" as mondex
+  usecase "Écouter le cri" as ecouter
+  usecase "Voir les Détails\nd'un mon" as details
+}
+
+joueur --> mondex
+mondex <.. details : <<extend>>\nclic sur un mon
+details <.. ecouter : <<extend>>\nbouton du cri
+@enduml

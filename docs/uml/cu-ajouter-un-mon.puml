@@ -1,0 +1,45 @@
+@startuml cu-ajouter-un-mon
+!pragma layout smetana
+left to right direction
+skinparam actorStyle awesome
+skinparam defaultFontName Segoe UI
+skinparam usecase {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+}
+skinparam rectangle {
+  BorderColor #3A4170
+  BackgroundColor #FAFAFD
+}
+title Fakemon Arena · cas d'utilisation, Ajouter un Mon (v1)
+
+actor "Joueur" as joueur
+
+rectangle "Ajouter un Mon" {
+  usecase "Ajouter un Mon" as ajouter
+  usecase "Quitter sans enregistrer" as quitter
+  usecase "Indiquer le designer" as designer
+  usecase "Valider et enregistrer" as valider
+  usecase "Choisir les attaques" as attaques
+  usecase "Choisir le cri" as cri
+  usecase "Choisir les sprites" as sprites
+  usecase "Choisir le talent" as talent
+  usecase "Saisir les noms,\ntypes et stats" as saisir
+}
+
+joueur --> ajouter
+ajouter ..> valider : <<include>>
+ajouter ..> attaques : <<include>>
+ajouter ..> cri : <<include>>
+ajouter ..> sprites : <<include>>
+ajouter ..> talent : <<include>>
+ajouter ..> saisir : <<include>>
+ajouter <.. designer : <<extend>>\nchamp rempli
+ajouter <.. quitter : <<extend>>\nÉchap sur une\nfiche commencée
+
+note right of valider
+  Refusée si : nom déjà pris, stats hors des
+  bornes ou total au-dessus de 600, pas de talent,
+  moins de 4 attaques, sprite de face ou cri manquant.
+end note
+@enduml

@@ -1,0 +1,53 @@
+@startuml cu-combat-en-ligne
+!pragma layout smetana
+left to right direction
+skinparam actorStyle awesome
+skinparam defaultFontName Segoe UI
+skinparam usecase {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+}
+skinparam rectangle {
+  BorderColor #3A4170
+  BackgroundColor #FAFAFD
+}
+title Fakemon Arena · cas d'utilisation, combat en ligne, bonus (v1)
+
+actor "Joueur" as joueur
+actor "Adversaire en ligne" as adv
+
+rectangle "Jouer un combat en ligne" {
+  usecase "Jouer un combat\nen ligne" as jouerLigne
+  usecase "Lancer une revanche\n(les deux joueurs)" as revanche
+  usecase "Voir le résultat\n(victoire ou défaite)" as resultat
+  usecase "Remplacer un mon KO" as ko
+  usecase "Mettre en pause\net abandonner" as pause
+  usecase "Changer de mon" as changer
+  usecase "Attaquer" as attaquer
+  usecase "Jouer un tour" as tour
+  usecase "Choisir son premier mon" as premier
+  usecase "Choisir ses 6 fakemon" as choisir6
+  usecase "Tirer les équipes" as tirer
+  usecase "Préparer la partie\ndans le lobby" as lobby
+  usecase "Rejoindre une partie" as rejoindre
+  usecase "Héberger une partie" as heberger
+  usecase "Se connecter\nà une partie" as connecter
+}
+
+joueur --> jouerLigne
+jouerLigne ..> connecter : <<include>>
+connecter <|-- heberger
+connecter <|-- rejoindre
+jouerLigne ..> lobby : <<include>>
+jouerLigne <.. tirer : <<extend>>\nmode aléatoire
+jouerLigne <.. choisir6 : <<extend>>\nmode construit
+jouerLigne <.. premier : <<extend>>\nmode construit
+jouerLigne ..> tour : <<include>>
+jouerLigne ..> resultat : <<include>>
+tour <|-- attaquer
+tour <|-- changer
+tour <.. pause : <<extend>>\nÉchap
+tour <.. ko : <<extend>>\nun mon tombe KO
+resultat <.. revanche : <<extend>>\nles deux cliquent\nsur Revanche
+jouerLigne -- adv
+@enduml
