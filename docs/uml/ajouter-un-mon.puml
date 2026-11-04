@@ -1,0 +1,24 @@
+@startuml ajouter-un-mon
+!pragma layout smetana
+title Fakemon Arena · Ajouter un Mon (v1)
+skinparam defaultFontName Segoe UI
+skinparam state {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+  ArrowColor #3A4170
+}
+hide empty description
+
+state "Menu principal" as Menu
+state "Ajouter un Mon" as Fiche : fiche : noms, types, stats, talent,\nsprites, cri, attaques, designer
+state remplie <<choice>>
+state "Quitter sans enregistrer ?" as Confirmation : Oui\nNon
+
+Menu --> Fiche : Ajouter un Mon
+Fiche --> Fiche : Enregistrer :\nmessage de confirmation,\nfiche vidée
+Fiche --> remplie : Échap ou Retour
+remplie --> Menu : fiche vide
+remplie --> Confirmation : fiche commencée
+Confirmation --> Menu : Oui
+Confirmation --> Fiche : Non
+@enduml

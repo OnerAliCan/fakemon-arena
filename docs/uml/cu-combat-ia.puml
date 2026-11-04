@@ -1,0 +1,47 @@
+@startuml cu-combat-ia
+!pragma layout smetana
+left to right direction
+skinparam actorStyle awesome
+skinparam defaultFontName Segoe UI
+skinparam usecase {
+  BackgroundColor #FFF6D6
+  BorderColor #B8901A
+}
+skinparam rectangle {
+  BorderColor #3A4170
+  BackgroundColor #FAFAFD
+}
+title Fakemon Arena · cas d'utilisation, combat contre l'IA (v1)
+
+actor "Joueur" as joueur
+actor "Ordinateur" as ia
+
+rectangle "Jouer un combat contre l'IA" {
+  usecase "Jouer un combat\ncontre l'IA" as jouerIA
+  usecase "Lancer une revanche" as revanche
+  usecase "Voir le résultat\n(victoire ou défaite)" as resultat
+  usecase "Remplacer un mon KO" as ko
+  usecase "Mettre en pause\net abandonner" as pause
+  usecase "Changer de mon" as changer
+  usecase "Attaquer" as attaquer
+  usecase "Jouer un tour" as tour
+  usecase "Choisir son premier mon" as premier
+  usecase "Choisir ses 6 fakemon" as choisir6
+  usecase "Tirer les équipes" as tirer
+  usecase "Choisir le mode\n(aléatoire ou construit)" as mode
+}
+
+joueur --> jouerIA
+jouerIA ..> mode : <<include>>
+jouerIA ..> tirer : <<include>>
+jouerIA <.. choisir6 : <<extend>>\nmode construit
+jouerIA <.. premier : <<extend>>\nmode construit
+jouerIA ..> tour : <<include>>
+jouerIA ..> resultat : <<include>>
+tour <|-- attaquer
+tour <|-- changer
+tour <.. pause : <<extend>>\nÉchap
+tour <.. ko : <<extend>>\nun mon tombe KO
+resultat <.. revanche : <<extend>>\nclic sur Revanche
+tour -- ia
+@enduml
