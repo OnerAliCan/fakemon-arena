@@ -159,7 +159,7 @@ Dans l'autre sens, la **Coulée ardente** de Pyrale (Feu, spéciale, 65, Attaque
 
 ## 6. Déroulement d'un tour
 
-1. **Choix.** Le joueur clique une attaque ou un changement ; l'ordinateur choisit en même temps (`AiController.chooseAction`). Aucun des deux ne voit le choix de l'autre.
+1. **Choix.** Le joueur clique une attaque ou un changement ; l'ordinateur choisit en même temps (`Opponent.chooseAction`). Aucun des deux ne voit le choix de l'autre.
 2. **Changements d'abord.** Un changement passe toujours avant les attaques. Si les deux camps changent, le plus rapide change en premier.
 3. **Attaques ensuite**, dans cet ordre :
    1. la **priorité** la plus haute (+1 pour les attaques rapides) ;
