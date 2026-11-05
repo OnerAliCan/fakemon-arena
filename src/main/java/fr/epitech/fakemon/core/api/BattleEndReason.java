@@ -14,5 +14,5 @@ public enum BattleEndReason {
     /**
      * Indique que le combat se termine par un abandon.
      */
-    SURRENDER
+    FORFEIT
 }
