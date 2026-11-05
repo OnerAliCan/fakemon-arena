@@ -1,0 +1,97 @@
+#!/bin/sh
+# Vérifie les normes du projet à chaque commit, dans cet ordre :
+# message, branche, fichiers interdits, compilation et tests.
+# Activation, une seule fois par machine : git config core.hooksPath .githooks
+
+TYPES='feat|fix|docs|test|refactor|chore'
+TAILLE_MAX=$((10 * 1024 * 1024))
+
+refuser() {
+    echo "" >&2
+    echo "Commit refusé : $1" >&2
+    shift
+    for ligne in "$@"; do
+        echo "  $ligne" >&2
+    done
+    echo "" >&2
+    exit 1
+}
+
+# Une fusion reprend des commits déjà vérifiés.
+if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+    exit 0
+fi
+
+# 1. Le message
+titre=$(head -n 1 "$1" | tr -d '\r')
+case "$titre" in
+    'Revert "'*) exit 0 ;;
+esac
+if ! echo "$titre" | grep -Eq "^($TYPES): .+ \(#[0-9]+\)$"; then
+    refuser "le message ne respecte pas la norme." \
+        "Reçu :   $titre" \
+        "Attendu : type: description (#numéro de l'issue)" \
+        "Exemple : feat: actions du joueur du contrat d'API (#4)" \
+        "Types :  feat, fix, docs, test, refactor, chore"
+fi
+numero_message=$(echo "$titre" | sed -E 's/.*\(#([0-9]+)\)$/\1/')
+
+# 2. La branche (aucune pendant un rebase)
+branche=$(git symbolic-ref -q --short HEAD)
+if [ -n "$branche" ]; then
+    if ! echo "$branche" | grep -Eq "^($TYPES)/[0-9]+-[a-z0-9-]+$"; then
+        refuser "le nom de la branche ne respecte pas la norme." \
+            "Reçu :   $branche" \
+            "Attendu : type/numéro-de-l-issue-description" \
+            "Exemple : feat/4-contrat-d-api"
+    fi
+    numero_branche=$(echo "$branche" | sed -E 's#^[a-z]+/([0-9]+)-.*#\1#')
+    if [ "$numero_message" != "$numero_branche" ]; then
+        refuser "le message et la branche ne parlent pas de la même issue." \
+            "Message : #$numero_message" \
+            "Branche : #$numero_branche"
+    fi
+fi
+
+# 3. Les fichiers interdits
+fichiers=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=ACMR)
+echo "$fichiers" | while IFS= read -r fichier; do
+    [ -n "$fichier" ] || continue
+    case "$fichier" in
+        node_modules/*|*/node_modules/*|target/*|*/target/*|__pycache__/*|*/__pycache__/*|*.class|*.jar)
+            refuser "ce fichier ne doit pas aller dans le dépôt." \
+                "$fichier" \
+                "Pour le retirer : git restore --staged \"$fichier\""
+            ;;
+    esac
+    taille=$(git cat-file -s ":$fichier")
+    if [ "$taille" -gt "$TAILLE_MAX" ]; then
+        refuser "ce fichier dépasse 10 Mo." \
+            "$fichier" \
+            "Pour le retirer : git restore --staged \"$fichier\""
+    fi
+done || exit 1
+
+# 4. La compilation et les tests, seulement si le code ou sa configuration changent
+if ! echo "$fichiers" | grep -Eq '^(src/|pom\.xml$|\.mvn/|mvnw)'; then
+    exit 0
+fi
+
+# On teste une copie de ce qui va être commité : un fichier non ajouté
+# ou en cours d'écriture ne doit ni bloquer le commit, ni le faire passer.
+copie=$(mktemp -d)
+trap 'rm -rf "$copie"' EXIT
+git checkout-index -a --prefix="$copie/"
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+
+echo "Compilation et tests de ce commit..."
+cd "$copie" || exit 1
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) ./mvnw.cmd -q -ntp test > sortie.log 2>&1 ;;
+    *) sh ./mvnw -q -ntp test > sortie.log 2>&1 ;;
+esac
+if [ $? -ne 0 ]; then
+    grep -E 'ERROR|FAIL' sortie.log | head -n 20 >&2
+    refuser "le projet ne compile pas, ou un test échoue." \
+        "Lance les tests de ton côté pour voir le détail."
+fi
