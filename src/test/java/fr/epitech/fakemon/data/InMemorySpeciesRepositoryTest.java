@@ -6,11 +6,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.epitech.fakemon.core.api.InvalidSpeciesException;
+import fr.epitech.fakemon.core.model.BaseStats;
 import fr.epitech.fakemon.core.model.Species;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /** Vérifie le catalogue en mémoire : lecture, recherche, ajout et refus des doublons. */
 class InMemorySpeciesRepositoryTest {
+
+    private Species createSpecies(String name) {
+        return new Species(
+            name,
+            name,
+            List.of(),
+            new BaseStats(100, 100, 100, 100, 100, 100),
+            List.of()
+        );
+    }
 
     @Test
     void findAllReturnsThreeSpecies() {
@@ -44,7 +56,7 @@ class InMemorySpeciesRepositoryTest {
     @Test
     void addAddsNewSpecies() {
         InMemorySpeciesRepository repository = new InMemorySpeciesRepository();
-        repository.add(new Species("Zarlou"));
+        repository.add(createSpecies("Zarlou"));
         assertTrue(repository.findByOriginalName("Zarlou").isPresent());
     }
 
@@ -52,7 +64,7 @@ class InMemorySpeciesRepositoryTest {
     void addRejectsDuplicate() {
         InMemorySpeciesRepository repository = new InMemorySpeciesRepository();
         assertThrows(InvalidSpeciesException.class, () ->
-            repository.add(new Species("Anu"))
+            repository.add(createSpecies("Anu"))
         );
     }
 }
