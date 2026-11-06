@@ -1,0 +1,202 @@
+@startuml classes-modele
+!pragma layout smetana
+skinparam dpi 110
+set separator none
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Segoe UI"
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFF8DC
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #555555
+title Fakemon Arena · modèle et effets (v1)\nCe qui est sous une ligne « issue 24 » ou « issues 22 et 45 » s'ajoute plus tard.
+
+package "core.model" {
+  enum Type <<#8>> {
+    FIRE
+    WATER
+    NATURE
+    LIGHTNING
+    ROCK
+    WIND
+    VENOM
+    FORCE
+    SHADOW
+    ETHER
+  }
+
+  enum MoveCategory <<#8>> {
+    PHYSICAL
+    SPECIAL
+  }
+
+  class Move <<#8>> {
+    - name : String
+    - type : Type
+    - category : MoveCategory
+    - power : int
+    - accuracy : int
+    - priority : int
+    --
+    + Move(name, type, category, power, accuracy, priority)
+    + getters
+  }
+
+  interface Stats <<#8>> {
+    + getHp() : int
+    + getAttack() : double
+    + getDefense() : double
+    + getSpecialAttack() : double
+    + getSpecialDefense() : double
+    + getSpeed() : double
+  }
+
+  class BaseStats <<#8>> {
+    - hp : int
+    - attack : int
+    - defense : int
+    - specialAttack : int
+    - specialDefense : int
+    - speed : int
+    --
+    + BaseStats(hp, attack, defense, specialAttack, specialDefense, speed)
+    + les 6 méthodes de Stats
+  }
+
+  class Species <<#8>> {
+    - originalName : String
+    - frenchName : String
+    - types : List<Type>
+    - stats : Stats
+    - possibleMoves : List<Move>
+    .. issue 24 ..
+    - talent : Talent
+    .. issues 22 et 45 ..
+    - number : int
+    - concept : String
+    - designer : String
+    - frontSprite : String
+    - backSprite : String
+    - cry : String
+    --
+    + Species(...)
+    + getters
+  }
+
+  class Fakemon <<#8>> {
+    - species : Species
+    - moves : List<Move>
+    - currentHp : int
+    .. issue 24 ..
+    - item : Item
+    --
+    + Fakemon(species, moves)
+    + getSpecies() : Species
+    + getMoves() : List<Move>
+    + getStats() : Stats
+    + getMaxHp() : int
+    + getCurrentHp() : int
+    + isFainted() : boolean
+    + takeDamage(damageTaken : int) : void
+    + heal(healedHp : int) : void
+    .. issue 24 ..
+    + getItem() : Item
+  }
+
+  class Team <<#8>> {
+    - fakemons : List<Fakemon>
+    --
+    + Team(fakemons : List<Fakemon>)
+    + getFakemons() : List<Fakemon>
+    + getStandingFakemons() : List<Fakemon>
+    + hasStandingFakemon() : boolean
+  }
+
+  abstract class Item <<#24>> {
+    - name : String
+    # wrappedStats : Stats
+    --
+    # Item(name, wrappedStats)
+    + getName() : String
+    + les 6 méthodes de Stats, qui renvoient celles de wrappedStats
+  }
+
+  abstract class Talent <<#24>> {
+    - name : String
+    - description : String
+    --
+    # Talent(name, description)
+    + getName() : String
+    + getDescription() : String
+    + entryDamage(target : Fakemon) : int
+    + damageDealtMultiplier(self : Fakemon) : double
+    + damageReceivedMultiplier(effectiveness : double) : double
+    + endOfTurnHeal(self : Fakemon) : int
+  }
+}
+
+package "core.effects" {
+  class Gauntlet <<#24>> {
+    + Gauntlet(wrappedStats)
+    + getAttack() : double
+    + getSpecialAttack() : double
+  }
+  class Shield <<#24>> {
+    + Shield(wrappedStats)
+    + getDefense() : double
+    + getSpecialDefense() : double
+  }
+  class Feather <<#24>> {
+    + Feather(wrappedStats)
+    + getSpeed() : double
+  }
+
+  class Smash <<#24>> {
+    + Smash()
+    + entryDamage(target) : int
+  }
+  class Armor <<#24>> {
+    + Armor()
+    + damageReceivedMultiplier(effectiveness) : double
+  }
+  class LastBreath <<#24>> {
+    + LastBreath()
+    + damageDealtMultiplier(self) : double
+  }
+  class Recovery <<#24>> {
+    + Recovery()
+    + endOfTurnHeal(self) : int
+  }
+}
+
+BaseStats ..|> Stats
+Item ..|> Stats
+Item o--> "1" Stats : enveloppe
+Gauntlet --|> Item
+Shield --|> Item
+Feather --|> Item
+
+Talent <|-- Smash
+Talent <|-- Armor
+Talent <|-- LastBreath
+Talent <|-- Recovery
+
+Species --> "1" Stats
+Species --> "1..2" Type
+Species --> "6" Move : possibleMoves
+Species --> "1" Talent
+Fakemon --> "1" Species
+Fakemon --> "4" Move : moves
+Fakemon --> "1" Item
+Team o--> "6 au plus" Fakemon
+Move --> "1" Type
+Move --> "1" MoveCategory
+
+legend bottom left
+  <b>Decorator (Item)</b> : comme Shield et FireSword au jour 08. L'objet enveloppe des stats et modifie seulement celles qu'il améliore de 20 %. Fakemon.getStats() renvoie alors l'objet.
+  <b>Strategy (Talent)</b> : chaque talent redéfinit seulement son moment. Par défaut, entryDamage et endOfTurnHeal renvoient 0, les deux multiplicateurs renvoient 1. Le talent calcule ; le moteur applique et envoie les événements.
+  <b>Fakemon</b> : une exception si moves ne contient pas 4 attaques. getStats() renvoie les stats de l'espèce jusqu'à l'issue 24. currentHp reste entre 0 et getMaxHp().
+  <b>Team</b> : une exception au-delà de 6 fakemons.
+  <b>Stats</b> : des double, car le GDD n'arrondit les dégâts qu'à la fin. Les objets ne changent jamais les PV : getHp() reste un int.
+endlegend
+@enduml

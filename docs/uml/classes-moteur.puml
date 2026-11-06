@@ -1,0 +1,180 @@
+@startuml classes-moteur
+!pragma layout smetana
+skinparam dpi 110
+set separator none
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Segoe UI"
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFF8DC
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #555555
+title Fakemon Arena · moteur, générateur, IA et données (v1)\ncore.api existe déjà ; les autres classes sont à écrire, sauf InMemorySpeciesRepository.
+
+package "core.api (déjà écrit)" {
+  interface BattleEngine {
+    + addListener(listener) : void
+    + start(playerTeam, opponentTeam, battleMode, opponent, random) : void
+    + submitAction(playerAction) : void
+    + getState() : BattleState
+  }
+  interface BattleState {
+    + getTeam(side) : Team
+    + getActiveFakemon(side) : Fakemon
+    + getTurnNumber() : int
+  }
+  interface BattleListener {
+    + onEvent(event : BattleEvent) : void
+  }
+  abstract class BattleEvent
+  interface Opponent {
+    + chooseAction(moveList, standingFakemonList) : PlayerAction
+    + chooseFakemon(standingFakemonList) : PlayerAction
+  }
+  interface TeamGenerator {
+    + randomTeam(excludedSpecies) : Team
+    + buildTeam(chosenSpecies) : Team
+  }
+  interface SpeciesRepository {
+    + findAll() : List<Species>
+    + findByOriginalName(originalName) : Optional<Species>
+    + add(species) : void
+  }
+  abstract class PlayerAction
+  enum Effectiveness
+}
+
+package "core.engine" {
+  class TypeChart <<#9>> {
+    - table : double[][]
+    --
+    + TypeChart()
+    + multiplier(attack : Type, defender : List<Type>) : double
+    + toEffectiveness(multiplier : double) : Effectiveness
+  }
+
+  class DamageCalculator <<#9>> {
+    - random : Random
+    - typeChart : TypeChart
+    --
+    + DamageCalculator(random, typeChart)
+    + rollAccuracy(move : Move) : boolean
+    + calculate(attacker : Fakemon, target : Fakemon, move : Move) : DamageResult
+  }
+
+  class DamageResult <<#9>> {
+    - damage : int
+    - critical : boolean
+    - multiplier : double
+    --
+    + DamageResult(damage, critical, multiplier)
+    + getters
+  }
+
+  class RandomTeamGenerator <<#10>> {
+    - repository : SpeciesRepository
+    - random : Random
+    --
+    + RandomTeamGenerator(repository, random)
+    + randomTeam(excludedSpecies) : Team
+    + buildTeam(chosenSpecies) : Team
+    - createFakemon(species) : Fakemon
+  }
+
+  class DefaultBattleEngine <<#17>> {
+    - listeners : List<BattleListener>
+    - playerTeam : Team
+    - opponentTeam : Team
+    - activePlayerFakemon : Fakemon
+    - activeOpponentFakemon : Fakemon
+    - opponent : Opponent
+    - damageCalculator : DamageCalculator
+    - random : Random
+    - turnNumber : int
+    - phase : BattlePhase
+    --
+    + les 4 méthodes de BattleEngine
+    + les 3 méthodes de BattleState
+    - resolveTurn(playerAction, opponentAction) : void
+    - useMove(side, move) : void
+    - sendFakemon(side, fakemon) : void
+    - applyEndOfTurn() : void
+    - notifyListeners(event) : void
+  }
+
+  enum BattlePhase <<#17>> {
+    WAITING_FIRST_FAKEMON
+    WAITING_ACTION
+    WAITING_REPLACEMENT
+    FINISHED
+  }
+}
+
+package "core.ai" {
+  class RandomOpponent <<#11>> {
+    - random : Random
+    --
+    + RandomOpponent(random)
+    + chooseAction(moveList, standingFakemonList) : PlayerAction
+    + chooseFakemon(standingFakemonList) : PlayerAction
+  }
+}
+
+package "data" {
+  class InMemorySpeciesRepository <<déjà écrit>> {
+    - speciesList : List<Species>
+  }
+  class JsonSpeciesRepository <<#22>> {
+    - speciesList : List<Species>
+    - factory : SpeciesFactory
+    - userFolder : Path
+    --
+    + JsonSpeciesRepository(factory, userFolder)
+    + les 3 méthodes de SpeciesRepository
+    - load() : void
+    - save(species) : void
+  }
+  class SpeciesFactory <<#22>> {
+    + createSpecies(json) : Species
+    + createMove(json) : Move
+  }
+}
+
+package "ui (Matteo)" {
+  class "Écran de combat" as CombatScreen <<#13, #26>>
+}
+
+DefaultBattleEngine ..|> BattleEngine
+DefaultBattleEngine ..|> BattleState
+DefaultBattleEngine o--> "*" BattleListener : prévient
+DefaultBattleEngine --> "1" Opponent : interroge
+DefaultBattleEngine *--> "1" DamageCalculator
+DefaultBattleEngine --> "1" BattlePhase
+DefaultBattleEngine ..> BattleEvent : envoie
+DefaultBattleEngine ..> PlayerAction : reçoit
+
+DamageCalculator *--> "1" TypeChart
+DamageCalculator ..> DamageResult : renvoie
+TypeChart ..> Effectiveness
+
+RandomTeamGenerator ..|> TeamGenerator
+RandomTeamGenerator --> "1" SpeciesRepository
+
+RandomOpponent ..|> Opponent
+RandomOpponent ..> PlayerAction : renvoie
+
+InMemorySpeciesRepository ..|> SpeciesRepository
+JsonSpeciesRepository ..|> SpeciesRepository
+JsonSpeciesRepository *--> "1" SpeciesFactory
+
+CombatScreen ..|> BattleListener
+CombatScreen --> BattleEngine : submitAction
+
+legend bottom left
+  <b>Observer (BattleListener)</b> : l'écran écoute l'arbitre, comme au jour 08. L'arbitre ne connaît pas l'écran.
+  <b>Strategy (Opponent)</b> : l'arbitre interroge un adversaire, sans savoir si c'est l'IA ou le réseau.
+  <b>Factory (SpeciesFactory)</b> : crée les espèces et les attaques à partir du JSON, comme au jour 08.
+  <b>Random</b> : le même sert à tous les tirages, pour qu'une graine fixée rende les tests reproductibles.
+  <b>BattlePhase</b> : submitAction lève IllegalStateException si l'action ne correspond pas à la phase.
+endlegend
+@enduml
