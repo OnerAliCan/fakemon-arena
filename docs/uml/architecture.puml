@@ -1,0 +1,92 @@
+@startuml architecture
+!pragma layout smetana
+skinparam dpi 110
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam packageStyle rectangle
+skinparam ArrowColor #3A4170
+skinparam componentStyle rectangle
+skinparam rectangle {
+  BackgroundColor<<devA>> #DCE8F7
+  BorderColor<<devA>> #2F5F9E
+  BackgroundColor<<devB>> #FFF6D6
+  BorderColor<<devB>> #B8901A
+  BackgroundColor<<contrat>> #E4F3E2
+  BorderColor<<contrat>> #3E8A3A
+  BackgroundColor<<bonus>> #F2F2F2
+  BorderColor<<bonus>> #888888
+  BackgroundColor<<fichiers>> #FFFFFF
+  BorderColor<<fichiers>> #555555
+}
+hide stereotype
+title Fakemon Arena · architecture (v1)\nComment le combat, l'IA, le multijoueur et le dashboard communiquent
+
+actor "Joueur" as Joueur
+
+package "ui · écrans JavaFX" {
+  rectangle "Menus\ncombat aléatoire ou construit" as Menus <<devB>>
+  rectangle "Écran de combat\net panneau d'équipe" as Combat <<devB>>
+  rectangle "Animations et son" as Son <<devB>>
+  rectangle "Mondex" as Mondex <<devB>>
+  rectangle "Ajouter un Mon\n(le dashboard)" as Dashboard <<devB>>
+}
+
+package "core.api · le contrat, seule frontière entre les écrans et le cœur" {
+  rectangle "TeamGenerator" as ITeam <<contrat>>
+  rectangle "BattleEngine" as IEngine <<contrat>>
+  rectangle "BattleListener" as IListener <<contrat>>
+  rectangle "Opponent" as IOpponent <<contrat>>
+  rectangle "SpeciesRepository" as IRepo <<contrat>>
+}
+
+package "le cœur du jeu, sans JavaFX" {
+  rectangle "core.engine\nRandomTeamGenerator" as Generator <<devA>>
+  rectangle "core.engine\nDefaultBattleEngine, DamageCalculator" as Engine <<devA>>
+  rectangle "core.model et core.effects\nFakemon, Team, talents, objets" as Model <<devA>>
+  rectangle "core.ai\nRandomOpponent" as AI <<devA>>
+}
+
+package "net · bonus" {
+  rectangle "NetworkOpponent\nl'adversaire en réseau local" as Net <<bonus>>
+}
+
+package "data · le catalogue" {
+  rectangle "JsonSpeciesRepository\n(InMemorySpeciesRepository en attendant)" as Repo <<devA>>
+}
+
+rectangle "Fichiers JSON et sprites\nroster du jeu + dossier utilisateur" as Files <<fichiers>>
+
+Joueur --> Menus : clique
+Joueur --> Combat : clique
+Joueur --> Mondex : consulte
+Joueur --> Dashboard : crée un mon
+
+Menus --> ITeam : randomTeam, buildTeam
+Menus --> IEngine : start
+Combat --> IEngine : submitAction, getState
+IListener --> Combat : onEvent
+IListener --> Son : onEvent
+Mondex --> IRepo : findAll
+Dashboard --> IRepo : add
+
+Generator .up.|> ITeam
+Engine .up.|> IEngine
+Engine --> IListener : envoie les events
+Engine --> IOpponent : chooseAction, chooseFakemon
+Generator --> IRepo : findAll
+Engine --> Model
+
+AI .up.|> IOpponent
+Net .up.|> IOpponent
+Repo .up.|> IRepo
+Repo --> Files : lit et écrit
+
+legend bottom left
+  <b>Le combat :</b> l'écran envoie l'action du joueur avec submitAction ; l'arbitre résout le tour et renvoie des faits avec onEvent (Observer).
+  <b>L'IA et le multijoueur :</b> l'arbitre interroge un Opponent sans savoir qui répond (Strategy). Le réseau local s'ajoute donc sans toucher à l'arbitre.
+  <b>Le dashboard :</b> Ajouter un Mon passe par le catalogue, comme le Mondex et le tirage des équipes. Un mon ajouté rejoint le jeu sans autre branchement.
+  <b>La frontière :</b> les écrans ne connaissent que core.api et les données de core.model. Le cœur n'importe jamais JavaFX : il se teste sans fenêtre.
+  <b>L'assemblage :</b> App crée les pièces concrètes et les donne aux écrans. C'est le seul endroit des écrans qui nomme core.engine, core.ai ou data.
+  <b>Couleurs :</b> bleu pour Dev A, jaune pour Dev B, vert pour le contrat commun, gris pour le bonus.
+endlegend
+@enduml

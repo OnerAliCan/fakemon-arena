@@ -1,0 +1,76 @@
+@startuml sequence-tour
+skinparam dpi 110
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam ArrowColor #3A4170
+skinparam sequence {
+  ParticipantBackgroundColor #FFFFFF
+  ParticipantBorderColor #555555
+  LifeLineBorderColor #888888
+  GroupBackgroundColor #F2F2F2
+}
+title Fakemon Arena · séquence d'un tour (v1)\nDu clic du joueur à l'affichage, cas d'une attaque contre l'IA
+
+actor "Joueur" as Joueur
+participant "Écran de combat\n(BattleListener)" as Ecran #FFF6D6
+participant "DefaultBattleEngine\n(l'arbitre)" as Arbitre #DCE8F7
+participant "RandomOpponent\n(Opponent)" as IA #DCE8F7
+participant "DamageCalculator" as Calcul #DCE8F7
+participant "Fakemon cible" as Cible #DCE8F7
+
+Joueur -> Ecran : clique sur une attaque
+Ecran -> Ecran : bloque les boutons
+Ecran -> Arbitre : submitAction(new UseMove(move))
+activate Arbitre
+Arbitre -> IA : chooseAction(moveList, standingFakemonList)
+IA --> Arbitre : PlayerAction
+Arbitre -> Arbitre : classe les actions : changements d'abord,\npuis priorité, Vitesse, pile ou face
+
+loop pour chaque action, si le mon qui agit n'est pas KO
+  Arbitre -> Ecran : onEvent(MoveUsedEvent)
+  Arbitre -> Calcul : rollAccuracy(move)
+  Calcul --> Arbitre : touché ou raté
+  alt attaque ratée
+    Arbitre -> Ecran : onEvent(MoveMissedEvent)
+  else attaque réussie
+    Arbitre -> Calcul : calculate(attacker, target, move)
+    Calcul --> Arbitre : DamageResult
+    Arbitre -> Cible : takeDamage(damage)
+    Arbitre -> Ecran : onEvent(CriticalHitEvent), si critique
+    Arbitre -> Ecran : onEvent(EffectivenessEvent), si l'efficacité n'est pas neutre
+    Arbitre -> Ecran : onEvent(HpLostEvent)
+    opt la cible n'a plus de PV
+      Arbitre -> Ecran : onEvent(FakemonFaintedEvent)
+    end
+  end
+end
+
+Arbitre -> Arbitre : fin de tour : talents de fin de tour\n(HpRestoredEvent, TalentActivatedEvent)
+
+alt un camp n'a plus de mon debout
+  Arbitre -> Ecran : onEvent(BattleEndedEvent)
+else le mon de l'IA est KO
+  Arbitre -> IA : chooseFakemon(standingFakemonList)
+  IA --> Arbitre : SendFakemon
+  Arbitre -> Ecran : onEvent(FakemonEnteredEvent)
+  Arbitre -> Ecran : onEvent(TurnStartedEvent)
+else le mon du joueur est KO
+  Arbitre -> Ecran : onEvent(FakemonSelectionRequiredEvent)
+  note right of Ecran : l'arbitre attend SendFakemon,\npuis envoie FakemonEnteredEvent\net TurnStartedEvent
+else les deux mons sont debout
+  Arbitre -> Ecran : onEvent(TurnStartedEvent)
+end
+Arbitre --> Ecran : fin de submitAction
+deactivate Arbitre
+
+Ecran -> Ecran : affiche les events un par un :\njournal, animations, barres de PV
+Ecran -> Ecran : réactive les boutons
+Ecran --> Joueur : le tour suivant peut commencer
+
+legend bottom left
+  <b>Sans thread :</b> les events arrivent pendant submitAction. L'écran les met en file et les affiche ensuite, à son rythme.
+  <b>Règle du contrat :</b> l'arbitre envoie des faits, l'écran rédige les phrases.
+  <b>Changement de mon :</b> même chemin avec SendFakemon, qui passe avant les attaques et envoie FakemonEnteredEvent.
+  <b>Talents et objets (#24) :</b> ils s'ajoutent à ce schéma, à l'entrée en jeu et dans le calcul des dégâts.
+endlegend
+@enduml
