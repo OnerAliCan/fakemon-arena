@@ -1,15 +1,13 @@
 package fr.epitech.fakemon;
 
+import fr.epitech.fakemon.ui.MainMenu;
+import fr.epitech.fakemon.ui.SceneManager;
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-/**
- * Application JavaFX de Fakemon Arena.
- * Pour l'instant, elle ouvre seulement la fenêtre du jeu : le menu arrive avec #12.
- */
+/** Application JavaFX de Fakemon Arena. */
 public class App extends Application {
 
     /** Titre de la fenêtre. */
@@ -17,7 +15,10 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) {
-        Scene scene = new Scene(new StackPane(new Label(TITLE)), 960, 540);
+        Scene scene = new Scene(new StackPane(), 960, 540);
+        SceneManager sceneManager = new SceneManager(scene);
+        sceneManager.show(new MainMenu(sceneManager));
+
         stage.setTitle(TITLE);
         stage.setScene(scene);
         stage.show();
