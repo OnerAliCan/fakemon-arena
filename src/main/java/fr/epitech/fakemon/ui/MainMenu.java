@@ -43,16 +43,9 @@ public class MainMenu extends VBox {
             sceneManager.show(this);
         });
 
-        VBox combatMenu = new VBox(15);
-        combatMenu.setAlignment(Pos.CENTER);
-        Button backButton = new Button("Retour");
-        combatMenu.getChildren().addAll(new Label("Combat contre l’IA"), backButton);
-
         combatButton.setOnAction(event -> {
-            sceneManager.show(combatMenu);
-        });
-        backButton.setOnAction(event -> {
-            sceneManager.show(this);
+            BattleScreen battleScreen = new BattleScreen(sceneManager, this); // Crée une instance de BattleScreen
+            sceneManager.show(battleScreen); // Affiche l'écran de combat
         });
 
         VBox mondexMenu = new VBox(15);
