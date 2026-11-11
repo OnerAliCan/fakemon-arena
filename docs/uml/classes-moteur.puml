@@ -92,10 +92,11 @@ package "core.engine" {
     - random : Random
     - turnNumber : int
     - phase : BattlePhase
+    - typeChart : TypeChart
     --
     + les 4 méthodes de BattleEngine
     + les 3 méthodes de BattleState
-    - resolveTurn(playerAction, opponentAction) : void
+    - resolveTurn(opponentMove, playerMove) : void
     - useMove(side, move) : void
     - sendFakemon(side, fakemon) : void
     - applyEndOfTurn() : void
@@ -149,6 +150,7 @@ DefaultBattleEngine ..|> BattleState
 DefaultBattleEngine o--> "*" BattleListener : prévient
 DefaultBattleEngine --> "1" Opponent : interroge
 DefaultBattleEngine *--> "1" DamageCalculator
+DefaultBattleEngine --> "1" TypeChart
 DefaultBattleEngine --> "1" BattlePhase
 DefaultBattleEngine ..> BattleEvent : envoie
 DefaultBattleEngine ..> PlayerAction : reçoit
