@@ -40,7 +40,7 @@ package "core.api · le contrat, seule frontière entre les écrans et le cœur"
 }
 
 package "le cœur du jeu, sans JavaFX" {
-  rectangle "core.engine\nRandomTeamGenerator" as Generator <<devA>>
+  rectangle "core.engine\nTeamDrafter" as Generator <<devA>>
   rectangle "core.engine\nDefaultBattleEngine, DamageCalculator" as Engine <<devA>>
   rectangle "core.model et core.effects\nFakemon, Team, talents, objets" as Model <<devA>>
   rectangle "core.ai\nRandomOpponent" as AI <<devA>>
