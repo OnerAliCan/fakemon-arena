@@ -25,9 +25,44 @@ class BattleDemoTest {
         }
         assertEquals(0, demo.pp[0]);
         assertTrue(demo.play(0).isEmpty());
-        demo.play(1);
         var events = demo.play(1);
-        assertEquals(0, ((HpLostEvent) events.get(2)).getHpLost());
+        BattleEndedEvent result = (BattleEndedEvent) events.get(3);
+        assertEquals(Side.PLAYER, result.getWinner());
         assertEquals(0, demo.opponent.getCurrentHp());
+        assertTrue(demo.play(1).isEmpty());
+        assertTrue(demo.forfeit().isEmpty());
+    }
+    @Test
+    void forfeitProducesOneDefeatAndStopsTheScenario() {
+        BattleDemo demo = new BattleDemo();
+        demo.play(0);
+        BattleEndedEvent result = (BattleEndedEvent) demo.forfeit().get(0);
+        assertEquals(Side.OPPONENT, result.getWinner());
+        assertEquals(BattleEndReason.FORFEIT, result.getReason());
+        assertEquals(1, demo.getTurn());
+        assertTrue(demo.forfeit().isEmpty());
+        assertTrue(demo.play(0).isEmpty());
+    }
+
+    @Test
+    void rematchDrawsFreshTeamsWithResetHpPpAndTurns() {
+        BattleDemo first = new BattleDemo(new java.util.Random(42));
+        BattleDemo second = new BattleDemo(new java.util.Random(43));
+        first.play(0);
+        assertEquals(6, second.playerTeam.getFakemons().size());
+        assertEquals(6, second.opponentTeam.getFakemons().size());
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (var mon : second.playerTeam.getFakemons()) {
+            assertTrue(names.add(mon.getSpecies().getOriginalName()));
+            assertEquals(mon.getMaxHp(), mon.getCurrentHp());
+        }
+        for (var mon : second.opponentTeam.getFakemons()) {
+            assertTrue(names.add(mon.getSpecies().getOriginalName()));
+            assertEquals(mon.getMaxHp(), mon.getCurrentHp());
+        }
+        assertEquals(0, second.getTurn());
+        assertEquals(4, second.pp[0]);
+        assertNotSame(first.player, second.player);
+        assertNotEquals(first.player.getSpecies().getOriginalName(), second.player.getSpecies().getOriginalName());
     }
 }

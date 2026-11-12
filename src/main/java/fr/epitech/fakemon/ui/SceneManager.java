@@ -1,5 +1,8 @@
 package fr.epitech.fakemon.ui;
 
+import fr.epitech.fakemon.core.api.Side;
+import fr.epitech.fakemon.core.api.BattleEndReason;
+import fr.epitech.fakemon.core.model.Team;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 
@@ -26,5 +29,27 @@ public final class SceneManager {
      */
     public void show(Parent screen) {
         scene.setRoot(screen);
+    }
+    /**
+     * Lance une nouvelle démonstration avec deux équipes fraîchement tirées.
+     * @param mainMenu menu existant à retrouver à la fin
+     */
+    public void startDemoBattle(MainMenu mainMenu) {
+        show(new BattleScreen(this, mainMenu));
+    }
+
+    /**
+     * Affiche le bilan et centralise les destinations de ses boutons.
+     * @param winner camp vainqueur
+     * @param reason raison de fin
+     * @param turns nombre de tours
+     * @param playerTeam équipe finale du joueur
+     * @param mainMenu menu existant
+     */
+    public void showBattleResult(Side winner,
+            BattleEndReason reason, int turns,
+            Team playerTeam, MainMenu mainMenu) {
+        show(new BattleEndScreen(winner, reason, turns, playerTeam,
+                () -> startDemoBattle(mainMenu), () -> show(mainMenu)));
     }
 }
