@@ -1,0 +1,23 @@
+@startuml
+actor Joueur
+participant BattleScreen
+participant BattleDemo
+participant SceneManager
+participant BattleEndScreen
+Joueur -> BattleScreen : attaque ou abandon
+BattleScreen -> BattleDemo : play(index) / forfeit()
+BattleDemo --> BattleScreen : liste de BattleEvent
+BattleScreen -> BattleScreen : onEvent(BattleEndedEvent)
+BattleScreen -> SceneManager : showBattleResult(vainqueur, raison, tours, équipe, menu)
+SceneManager -> BattleEndScreen : créer le bilan et ses actions
+SceneManager -> SceneManager : show(bilan)
+alt Revanche
+  Joueur -> BattleEndScreen : clic Revanche
+  BattleEndScreen -> SceneManager : startDemoBattle(menu)
+  SceneManager -> BattleScreen : créer un nouvel écran
+  BattleScreen -> BattleDemo : nouveau tirage via TeamDrafter
+else Menu
+  Joueur -> BattleEndScreen : clic Menu
+  BattleEndScreen -> SceneManager : show(menu existant)
+end
+@enduml

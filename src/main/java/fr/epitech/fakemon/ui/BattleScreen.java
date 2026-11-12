@@ -1,9 +1,11 @@
 package fr.epitech.fakemon.ui;
 
-import java.util.List;
+import java.util.Random;
+import java.util.Locale;
 import java.util.Objects;
 
 import fr.epitech.fakemon.core.api.BattleEvent;
+import fr.epitech.fakemon.core.api.BattleEndedEvent;
 import fr.epitech.fakemon.core.api.BattleListener;
 import fr.epitech.fakemon.core.api.HpLostEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
@@ -35,7 +37,11 @@ public class BattleScreen extends BorderPane implements BattleListener {
     private final ProgressBar opponentHpBar = new ProgressBar();
     private final Label playerHpLabel = new Label();
     private final Label opponentHpLabel = new Label();
-    private final BattleDemo demo = new BattleDemo();
+    private final BattleDemo demo = new BattleDemo(new Random());
+    private final SceneManager sceneManager;
+    private final MainMenu mainMenu;
+    private int turnNumber;
+    private boolean ended;
 
     /**
      * Construit l'écran de combat sur des données factices.
@@ -43,18 +49,24 @@ public class BattleScreen extends BorderPane implements BattleListener {
      * @param mainMenu menu à retrouver au retour
      */
     public BattleScreen(SceneManager sceneManager, MainMenu mainMenu) {
+        this.sceneManager = sceneManager;
+        this.mainMenu = mainMenu;
         setPadding(new Insets(12));
         Button backButton = new Button("Retour au menu");
         backButton.setOnAction(event -> sceneManager.show(mainMenu));
-        HBox header = new HBox(20, backButton, new Label("Combat de démonstration — données factices"));
+        Button forfeitButton = new Button("Abandonner");
+        forfeitButton.setOnAction(event -> {
+            for (BattleEvent battleEvent : demo.forfeit()) { onEvent(battleEvent); }
+        });
+        HBox header = new HBox(20, backButton, forfeitButton, new Label("Combat de démonstration — données factices"));
         header.setAlignment(Pos.CENTER_LEFT);
         setTop(header);
 
         // Les panneaux partagent la hauteur disponible au lieu de s'empiler.
         StackPane arena = new StackPane();
-        VBox opponentPanel = createFakemonPanel(demo.opponent, "front/forbiddron.png",
+        VBox opponentPanel = createFakemonPanel(demo.opponent, "front/" + demo.opponent.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png",
                 opponentHpBar, opponentHpLabel, 96);
-        VBox playerPanel = createFakemonPanel(demo.player, "back/koaninja.png",
+        VBox playerPanel = createFakemonPanel(demo.player, "back/" + demo.player.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png",
                 playerHpBar, playerHpLabel, 112);
         StackPane.setAlignment(opponentPanel, Pos.TOP_RIGHT);
         StackPane.setAlignment(playerPanel, Pos.BOTTOM_LEFT);
@@ -138,7 +150,13 @@ public class BattleScreen extends BorderPane implements BattleListener {
      */
     @Override
     public void onEvent(BattleEvent event) {
-        if (event instanceof TurnStartedEvent) {
+        if (ended) { return; }
+        if (event instanceof BattleEndedEvent) {
+            ended = true;
+            BattleEndedEvent result = (BattleEndedEvent) event;
+            sceneManager.showBattleResult(result.getWinner(), result.getReason(), turnNumber, demo.playerTeam, mainMenu);
+        } else if (event instanceof TurnStartedEvent) {
+            turnNumber = ((TurnStartedEvent) event).getTurnNumber();
             appendLog("Tour " + ((TurnStartedEvent) event).getTurnNumber());
         } else if (event instanceof MoveUsedEvent) {
             MoveUsedEvent move = (MoveUsedEvent) event;
