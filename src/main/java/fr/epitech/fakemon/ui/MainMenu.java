@@ -44,8 +44,8 @@ public class MainMenu extends VBox {
         });
 
         combatButton.setOnAction(event -> {
-            BattleScreen battleScreen = new BattleScreen(sceneManager, this); // Crée une instance de BattleScreen
-            sceneManager.show(battleScreen); // Affiche l'écran de combat
+            TeamPreviewScreen teamPreviewScreen = new TeamPreviewScreen(sceneManager, this);
+            sceneManager.show(teamPreviewScreen); // Affiche l'écran de preview de l'équipe
         });
 
         VBox mondexMenu = new VBox(15);
