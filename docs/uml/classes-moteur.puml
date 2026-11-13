@@ -71,11 +71,11 @@ package "core.engine" {
     + getters
   }
 
-  class RandomTeamGenerator <<#10>> {
-    - repository : SpeciesRepository
+  class TeamDrafter <<#10>> {
+    - speciesRepository : SpeciesRepository
     - random : Random
     --
-    + RandomTeamGenerator(repository, random)
+    + TeamDrafter(speciesRepository, random)
     + randomTeam(excludedSpecies) : Team
     + buildTeam(chosenSpecies) : Team
     - createFakemon(species) : Fakemon
@@ -159,8 +159,8 @@ DamageCalculator *--> "1" TypeChart
 DamageCalculator ..> DamageResult : renvoie
 TypeChart ..> Effectiveness
 
-RandomTeamGenerator ..|> TeamGenerator
-RandomTeamGenerator --> "1" SpeciesRepository
+TeamDrafter ..|> TeamGenerator
+TeamDrafter --> "1" SpeciesRepository
 
 RandomOpponent ..|> Opponent
 RandomOpponent ..> PlayerAction : renvoie

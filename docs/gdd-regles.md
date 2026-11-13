@@ -201,7 +201,7 @@ Le jeu affiche le **nom français**. Le nom d'origine sert d'identifiant et pour
 
 | # | Nom FR | Nom d'origine | Types | Talent | Couverture | Concept |
 |---|---|---|---|---|---|---|
-| 1 | Tarentemps | Trantima | Venin / Roche | Carapace | | Tarentule-cadran solaire, gardienne du temps |
+| 1 | Tempsrentule | Trantima | Venin / Roche | Carapace | | Tarentule-cadran solaire, gardienne du temps |
 | 2 | Stoillone | Webruiser | Venin / Force | Dernier souffle | | Araignée boxeuse, inspirée de Rocky |
 | 3 | Nubis | Anu | Ombre | Récupération | Éther | Renard des rêves, qui rôde la nuit |
 | 4 | Zarlou | Lizquent | Ombre / Force | Fracas | | Lézard voyou au gros poing |
