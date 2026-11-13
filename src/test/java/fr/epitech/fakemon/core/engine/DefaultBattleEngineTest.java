@@ -483,6 +483,255 @@ class DefaultBattleEngineTest {
         );
     }
 
+    @Test
+    void playerSwitchHappensBeforeOpponentAttack() {
+        Fakemon alpha = createFakemon("Alpha", FAST, WEAK);
+        Fakemon beta = createFakemon("Beta", SLOW, WEAK);
+        startBattle(
+            new Team(List.of(alpha, beta)),
+            new Team(List.of(createFakemon("Gamma", SLOW, WEAK))),
+            NO_CRITICAL_SEED
+        );
+
+        engine.submitAction(new SendFakemon(beta));
+
+        assertEquals(
+            List.of(
+                FakemonEnteredEvent.class,
+                MoveUsedEvent.class,
+                HpLostEvent.class,
+                TurnStartedEvent.class
+            ),
+            listener.eventTypes()
+        );
+        FakemonEnteredEvent entered = (FakemonEnteredEvent) listener.events.get(0);
+        assertEquals(Side.PLAYER, entered.getSide());
+        assertSame(beta, entered.getFakemon());
+        assertEquals(Side.OPPONENT, firstSideToAct());
+        assertSame(beta, ((HpLostEvent) listener.events.get(2)).getFakemon());
+        assertEquals(alpha.getMaxHp(), alpha.getCurrentHp());
+        assertSame(beta, engine.getState().getActiveFakemon(Side.PLAYER));
+    }
+
+    @Test
+    void opponentSwitchHappensBeforePlayerAttack() {
+        Fakemon delta = createFakemon("Delta", SLOW, WEAK);
+        startBattle(
+            new Team(List.of(createFakemon("Alpha", FAST, WEAK))),
+            new Team(List.of(createFakemon("Gamma", SLOW, WEAK), delta)),
+            NO_CRITICAL_SEED
+        );
+        opponent.forcedAction = new SendFakemon(delta);
+
+        engine.submitAction(new UseMove(WEAK));
+
+        assertEquals(
+            List.of(
+                FakemonEnteredEvent.class,
+                MoveUsedEvent.class,
+                HpLostEvent.class,
+                TurnStartedEvent.class
+            ),
+            listener.eventTypes()
+        );
+        FakemonEnteredEvent entered = (FakemonEnteredEvent) listener.events.get(0);
+        assertEquals(Side.OPPONENT, entered.getSide());
+        assertSame(delta, entered.getFakemon());
+        assertSame(delta, ((HpLostEvent) listener.events.get(2)).getFakemon());
+        assertSame(delta, engine.getState().getActiveFakemon(Side.OPPONENT));
+    }
+
+    @Test
+    void fasterSideSwitchesFirstWhenBothSwitch() {
+        assertEquals(Side.PLAYER, firstSideToEnterWhenBothSwitch(FAST, SLOW));
+        assertEquals(Side.OPPONENT, firstSideToEnterWhenBothSwitch(SLOW, FAST));
+    }
+
+    @Test
+    void sendingActiveFakemonIsRefused() {
+        Fakemon alpha = createFakemon("Alpha", FAST, WEAK);
+        startBattle(
+            new Team(List.of(alpha, createFakemon("Beta", SLOW, WEAK))),
+            new Team(List.of(createFakemon("Gamma", SLOW, WEAK))),
+            NO_CRITICAL_SEED
+        );
+
+        assertThrows(IllegalStateException.class, () ->
+            engine.submitAction(new SendFakemon(alpha))
+        );
+        assertEquals(0, opponent.askedActions);
+        assertTrue(listener.events.isEmpty());
+    }
+
+    @Test
+    void sendingFaintedFakemonIsRefused() {
+        Fakemon beta = createFakemon("Beta", SLOW, WEAK);
+        startBattle(
+            new Team(List.of(createFakemon("Alpha", FAST, WEAK), beta)),
+            new Team(List.of(createFakemon("Gamma", SLOW, WEAK))),
+            NO_CRITICAL_SEED
+        );
+        beta.takeDamage(beta.getMaxHp());
+
+        assertThrows(IllegalStateException.class, () ->
+            engine.submitAction(new SendFakemon(beta))
+        );
+        assertEquals(0, opponent.askedActions);
+    }
+
+    @Test
+    void sendingFakemonOfOtherTeamIsRefused() {
+        Fakemon gamma = createFakemon("Gamma", SLOW, WEAK);
+        Fakemon delta = createFakemon("Delta", SLOW, WEAK);
+        startBattle(
+            new Team(List.of(createFakemon("Alpha", FAST, WEAK))),
+            new Team(List.of(gamma, delta)),
+            NO_CRITICAL_SEED
+        );
+
+        assertThrows(IllegalStateException.class, () ->
+            engine.submitAction(new SendFakemon(delta))
+        );
+    }
+
+    @Test
+    void opponentFaintedFakemonIsReplacedRightAway() {
+        Fakemon gamma = createFakemon("Gamma", SLOW, WEAK);
+        Fakemon delta = createFakemon("Delta", SLOW, WEAK);
+        startBattle(
+            new Team(List.of(createFakemon("Alpha", FAST, KNOCK_OUT))),
+            new Team(List.of(gamma, delta)),
+            NO_CRITICAL_SEED
+        );
+
+        engine.submitAction(new UseMove(KNOCK_OUT));
+
+        assertEquals(
+            List.of(
+                MoveUsedEvent.class,
+                HpLostEvent.class,
+                FakemonFaintedEvent.class,
+                FakemonEnteredEvent.class,
+                TurnStartedEvent.class
+            ),
+            listener.eventTypes()
+        );
+        FakemonEnteredEvent entered = (FakemonEnteredEvent) listener.events.get(3);
+        assertEquals(Side.OPPONENT, entered.getSide());
+        assertSame(delta, entered.getFakemon());
+        assertSame(delta, engine.getState().getActiveFakemon(Side.OPPONENT));
+        assertEquals(2, engine.getState().getTurnNumber());
+
+        listener.events.clear();
+        engine.submitAction(new UseMove(WEAK));
+        assertEquals(Side.PLAYER, firstSideToAct());
+    }
+
+    @Test
+    void playerFaintedFakemonWaitsForReplacement() {
+        Fakemon alpha = createFakemon("Alpha", SLOW, WEAK);
+        Fakemon beta = createFakemon("Beta", SLOW, WEAK);
+        startBattle(
+            new Team(List.of(alpha, beta)),
+            new Team(List.of(createFakemon("Gamma", FAST, KNOCK_OUT))),
+            NO_CRITICAL_SEED
+        );
+
+        engine.submitAction(new UseMove(WEAK));
+
+        assertEquals(
+            List.of(
+                MoveUsedEvent.class,
+                HpLostEvent.class,
+                FakemonFaintedEvent.class,
+                FakemonSelectionRequiredEvent.class
+            ),
+            listener.eventTypes()
+        );
+        FakemonSelectionRequiredEvent selection =
+            (FakemonSelectionRequiredEvent) listener.events.get(3);
+        assertEquals(SelectionReason.REPLACEMENT, selection.getReason());
+        assertThrows(IllegalStateException.class, () ->
+            engine.submitAction(new UseMove(WEAK))
+        );
+        assertThrows(IllegalStateException.class, () ->
+            engine.submitAction(new SendFakemon(alpha))
+        );
+
+        listener.events.clear();
+        engine.submitAction(new SendFakemon(beta));
+
+        assertEquals(
+            List.of(FakemonEnteredEvent.class, TurnStartedEvent.class),
+            listener.eventTypes()
+        );
+        assertSame(beta, engine.getState().getActiveFakemon(Side.PLAYER));
+        assertEquals(2, engine.getState().getTurnNumber());
+    }
+
+    /**
+     * Un double KO ne peut pas encore arriver par les attaques : un Fakemon KO n'attaque plus.
+     * Il arrivera avec les dégâts de fin de tour (statuts, talents). Le test le simule
+     * en mettant KO le Fakemon de l'adversaire pendant que l'arbitre attend le remplaçant du joueur.
+     */
+    @Test
+    void doubleKnockOutSendsBothReplacementsTogetherFasterFirst() {
+        Fakemon beta = createFakemon("Beta", SLOW, WEAK);
+        Fakemon gamma = createFakemon("Gamma", FAST, KNOCK_OUT);
+        Fakemon delta = createFakemon("Delta", SLOW, WEAK);
+        startBattle(
+            new Team(List.of(createFakemon("Alpha", SLOW, WEAK), beta)),
+            new Team(List.of(gamma, delta)),
+            NO_CRITICAL_SEED
+        );
+        engine.submitAction(new UseMove(WEAK));
+        gamma.takeDamage(gamma.getMaxHp());
+
+        listener.events.clear();
+        engine.submitAction(new SendFakemon(beta));
+
+        assertEquals(
+            List.of(
+                FakemonEnteredEvent.class,
+                FakemonEnteredEvent.class,
+                TurnStartedEvent.class
+            ),
+            listener.eventTypes()
+        );
+        FakemonEnteredEvent first = (FakemonEnteredEvent) listener.events.get(0);
+        FakemonEnteredEvent second = (FakemonEnteredEvent) listener.events.get(1);
+        assertEquals(Side.OPPONENT, first.getSide());
+        assertSame(delta, first.getFakemon());
+        assertEquals(Side.PLAYER, second.getSide());
+        assertSame(beta, second.getFakemon());
+    }
+
+    /** Fait changer de Fakemon les deux camps au même tour, et renvoie le camp dont le Fakemon est entré en premier. */
+    private Side firstSideToEnterWhenBothSwitch(int playerSpeed, int opponentSpeed) {
+        RecordingListener switchListener = new RecordingListener();
+        FirstMoveOpponent switchOpponent = new FirstMoveOpponent();
+        DefaultBattleEngine switchEngine = new DefaultBattleEngine();
+        Fakemon beta = createFakemon("Beta", SLOW, WEAK);
+        Fakemon delta = createFakemon("Delta", SLOW, WEAK);
+        switchEngine.addListener(switchListener);
+        switchEngine.start(
+            new Team(List.of(createFakemon("Alpha", playerSpeed, WEAK), beta)),
+            new Team(List.of(createFakemon("Gamma", opponentSpeed, WEAK), delta)),
+            BattleMode.RANDOM,
+            switchOpponent,
+            new Random(NO_CRITICAL_SEED)
+        );
+        switchListener.events.clear();
+        switchOpponent.forcedAction = new SendFakemon(delta);
+
+        switchEngine.submitAction(new SendFakemon(beta));
+
+        return switchListener
+            .eventsOfType(FakemonEnteredEvent.class)
+            .get(0)
+            .getSide();
+    }
+
     /** Démarre un combat aléatoire, puis vide la liste des événements : les tests ne voient que le tour joué. */
     private void startBattle(Team playerTeam, Team opponentTeam, long seed) {
         engine.addListener(listener);
@@ -593,12 +842,16 @@ class DefaultBattleEngineTest {
         }
     }
 
-    /** Un adversaire qui joue toujours la première attaque de son mon, et note ce que l'arbitre lui donne. */
+    /**
+     * Un adversaire qui joue la première attaque de son Fakemon, sauf si le test lui impose une action.
+     * Il note ce que l'arbitre lui donne, et envoie son premier Fakemon debout comme remplaçant.
+     */
     private static class FirstMoveOpponent implements Opponent {
 
         private int askedActions = 0;
         private List<Move> lastMoveList;
         private List<Fakemon> lastStandingFakemonList;
+        private PlayerAction forcedAction;
 
         @Override
         public PlayerAction chooseAction(
@@ -608,6 +861,9 @@ class DefaultBattleEngineTest {
             askedActions++;
             lastMoveList = moveList;
             lastStandingFakemonList = standingFakemonList;
+            if (forcedAction != null) {
+                return forcedAction;
+            }
             return new UseMove(moveList.get(0));
         }
 
