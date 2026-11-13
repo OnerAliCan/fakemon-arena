@@ -32,6 +32,7 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Team;
 import fr.epitech.fakemon.core.model.Type;
 import java.util.ArrayList;
@@ -554,13 +555,16 @@ class DefaultBattleEngineTest {
         int speed,
         Move firstMove
     ) {
-        Species species = new Species(
-            name,
-            name,
-            List.of(type),
-            new BaseStats(100, 100, 100, 100, 100, speed),
-            List.of(firstMove, WEAK, WEAK, WEAK)
-        );
+        Species species = new Species.Builder()
+            .originalName(name)
+            .frenchName(name)
+            .types(List.of(type))
+            .stats(new BaseStats(100, 100, 100, 100, 100, speed))
+            .possibleMoves(List.of(firstMove, WEAK, WEAK, WEAK))
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/test.png")
+            .backSprite("/sprites/back/test.png")
+            .build();
         return new Fakemon(species, List.of(firstMove, WEAK, WEAK, WEAK));
     }
 

@@ -13,6 +13,7 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Type;
 
 /** Scénario déterministe pour vérifier l'écran ; ne représente pas les règles du moteur. */
@@ -29,8 +30,16 @@ final class BattleDemo {
     private int turn;
 
     private Fakemon createFakemon(String name, Type type, int hp) {
-        Species species = new Species(name, name, List.of(type),
-                new BaseStats(hp, 50, 50, 50, 50, 50), moves);
+        Species species = new Species.Builder()
+                .originalName(name)
+                .frenchName(name)
+                .types(List.of(type))
+                .stats(new BaseStats(hp, 50, 50, 50, 50, 50))
+                .possibleMoves(moves)
+                .talent(Talent.CARAPACE)
+                .frontSprite("/sprites/front/test.png")
+                .backSprite("/sprites/back/test.png")
+                .build();
         return new Fakemon(species, moves);
     }
 

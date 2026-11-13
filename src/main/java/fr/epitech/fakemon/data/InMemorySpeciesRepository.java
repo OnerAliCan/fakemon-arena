@@ -6,6 +6,7 @@ import fr.epitech.fakemon.core.model.BaseStats;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,89 +79,152 @@ public class InMemorySpeciesRepository implements SpeciesRepository {
         Move grandeFloraison = new Move("Grande floraison", Type.NATURE, MoveCategory.SPECIAL, 95, 80, 0);
 
         this.speciesList = new ArrayList<>();
-        this.speciesList.add(new Species(
-            "Trantima",
-            "Tempsrentule",
-            List.of(Type.VENOM, Type.ROCK),
-            new BaseStats(85, 150, 110, 55, 105, 95),
-            List.of(aiguillon, crachatAcide, nueeVenimeuse, gravillon, coupDeMoellon, failleTellurique)
-        ));
-        this.speciesList.add(new Species(
-            "Webruiser",
-            "Stoillone",
-            List.of(Type.VENOM, Type.FORCE),
-            new BaseStats(110, 150, 115, 55, 90, 80),
-            List.of(aiguillon, crachatAcide, nueeVenimeuse, coupSec, crochet, coupDeMassue)
-        ));
-        this.speciesList.add(new Species(
-            "Anu",
-            "Nubis",
-            List.of(Type.SHADOW),
-            new BaseStats(100, 50, 80, 145, 115, 110),
-            List.of(murmure, voileNoir, eclipse, lueur, ondeMentale, comete)
-        ));
-        this.speciesList.add(new Species(
-            "Lizquent",
-            "Zarlou",
-            List.of(Type.SHADOW, Type.FORCE),
-            new BaseStats(85, 120, 85, 95, 85, 130),
-            List.of(murmure, voileNoir, eclipse, coupSec, crochet, coupDeMassue)
-        ));
-        this.speciesList.add(new Species(
-            "Nemesusa",
-            "Némésuse",
-            List.of(Type.SHADOW, Type.WATER),
-            new BaseStats(90, 60, 85, 150, 125, 90),
-            List.of(murmure, voileNoir, eclipse, embrun, ressac, lameDeFond)
-        ));
-        this.speciesList.add(new Species(
-            "Firomenis",
-            "Pyrale",
-            List.of(Type.FIRE, Type.VENOM),
-            new BaseStats(75, 125, 65, 85, 100, 150),
-            List.of(tison, couleeArdente, fournaise, aiguillon, crachatAcide, nueeVenimeuse)
-        ));
-        this.speciesList.add(new Species(
-            "Dynabit",
-            "Dynacell",
-            List.of(Type.LIGHTNING),
-            new BaseStats(135, 95, 120, 70, 115, 65),
-            List.of(gresillement, arcElectrique, orageSec, coupSec, crochet, coupDeMassue)
-        ));
-        this.speciesList.add(new Species(
-            "Chimbat",
-            "Chauve-Suie",
-            List.of(Type.FIRE, Type.WIND),
-            new BaseStats(75, 75, 80, 150, 110, 110),
-            List.of(tison, couleeArdente, fournaise, courantDAir, bourrasque, cyclone)
-        ));
-        this.speciesList.add(new Species(
-            "Varanitor",
-            "Varaniteur",
-            List.of(Type.NATURE, Type.ROCK),
-            new BaseStats(95, 150, 110, 65, 80, 100),
-            List.of(epine, fouetDeRonces, grandeFloraison, gravillon, coupDeMoellon, failleTellurique)
-        ));
-        this.speciesList.add(new Species(
-            "Forbiddron",
-            "Mormite",
-            List.of(Type.VENOM, Type.SHADOW),
-            new BaseStats(100, 55, 85, 140, 120, 100),
-            List.of(aiguillon, crachatAcide, nueeVenimeuse, murmure, voileNoir, eclipse)
-        ));
-        this.speciesList.add(new Species(
-            "Tuffettry",
-            "Poufêtonne",
-            List.of(Type.ETHER),
-            new BaseStats(75, 60, 95, 150, 115, 105),
-            List.of(lueur, ondeMentale, comete, courantDAir, bourrasque, cyclone)
-        ));
-        this.speciesList.add(new Species(
-            "Deember",
-            "Décendre",
-            List.of(Type.FIRE, Type.LIGHTNING),
-            new BaseStats(85, 60, 80, 150, 130, 95),
-            List.of(tison, couleeArdente, fournaise, gresillement, arcElectrique, orageSec)
-        ));
+        this.speciesList.add(new Species.Builder()
+            .originalName("Trantima")
+            .frenchName("Tempsrentule")
+            .types(List.of(Type.VENOM, Type.ROCK))
+            .stats(new BaseStats(85, 150, 110, 55, 105, 95))
+            .possibleMoves(List.of(aiguillon, crachatAcide, nueeVenimeuse, gravillon, coupDeMoellon, failleTellurique))
+            .dexNumber(1)
+            .talent(Talent.CARAPACE)
+            .concept("Tarentule-cadran solaire, gardienne du temps")
+            .frontSprite("/sprites/front/trantima.png")
+            .backSprite("/sprites/back/trantima.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Webruiser")
+            .frenchName("Stoillone")
+            .types(List.of(Type.VENOM, Type.FORCE))
+            .stats(new BaseStats(110, 150, 115, 55, 90, 80))
+            .possibleMoves(List.of(aiguillon, crachatAcide, nueeVenimeuse, coupSec, crochet, coupDeMassue))
+            .dexNumber(2)
+            .talent(Talent.DERNIER_SOUFFLE)
+            .concept("Araignée boxeuse, inspirée de Rocky")
+            .frontSprite("/sprites/front/webruiser.png")
+            .backSprite("/sprites/back/webruiser.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Anu")
+            .frenchName("Nubis")
+            .types(List.of(Type.SHADOW))
+            .stats(new BaseStats(100, 50, 80, 145, 115, 110))
+            .possibleMoves(List.of(murmure, voileNoir, eclipse, lueur, ondeMentale, comete))
+            .dexNumber(3)
+            .talent(Talent.RECUPERATION)
+            .coverageType(Type.ETHER)
+            .concept("Renard des rêves, qui rôde la nuit")
+            .frontSprite("/sprites/front/anu.png")
+            .backSprite("/sprites/back/anu.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Lizquent")
+            .frenchName("Zarlou")
+            .types(List.of(Type.SHADOW, Type.FORCE))
+            .stats(new BaseStats(85, 120, 85, 95, 85, 130))
+            .possibleMoves(List.of(murmure, voileNoir, eclipse, coupSec, crochet, coupDeMassue))
+            .dexNumber(4)
+            .talent(Talent.FRACAS)
+            .concept("Lézard voyou au gros poing")
+            .frontSprite("/sprites/front/lizquent.png")
+            .backSprite("/sprites/back/lizquent.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Nemesusa")
+            .frenchName("Némésuse")
+            .types(List.of(Type.SHADOW, Type.WATER))
+            .stats(new BaseStats(90, 60, 85, 150, 125, 90))
+            .possibleMoves(List.of(murmure, voileNoir, eclipse, embrun, ressac, lameDeFond))
+            .dexNumber(5)
+            .talent(Talent.DERNIER_SOUFFLE)
+            .concept("Sorcière des mers, entre Némésis et la méduse")
+            .frontSprite("/sprites/front/nemesusa.png")
+            .backSprite("/sprites/back/nemesusa.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Firomenis")
+            .frenchName("Pyrale")
+            .types(List.of(Type.FIRE, Type.VENOM))
+            .stats(new BaseStats(75, 125, 65, 85, 100, 150))
+            .possibleMoves(List.of(tison, couleeArdente, fournaise, aiguillon, crachatAcide, nueeVenimeuse))
+            .dexNumber(6)
+            .talent(Talent.DERNIER_SOUFFLE)
+            .concept("Papillon de nuit qu'on croyait né des flammes")
+            .frontSprite("/sprites/front/firomenis.png")
+            .backSprite("/sprites/back/firomenis.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Dynabit")
+            .frenchName("Dynacell")
+            .types(List.of(Type.LIGHTNING))
+            .stats(new BaseStats(135, 95, 120, 70, 115, 65))
+            .possibleMoves(List.of(gresillement, arcElectrique, orageSec, coupSec, crochet, coupDeMassue))
+            .dexNumber(7)
+            .talent(Talent.RECUPERATION)
+            .coverageType(Type.FORCE)
+            .concept("Lapin-dynamo rose, toujours chargé")
+            .frontSprite("/sprites/front/dynabit.png")
+            .backSprite("/sprites/back/dynabit.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Chimbat")
+            .frenchName("Chauve-Suie")
+            .types(List.of(Type.FIRE, Type.WIND))
+            .stats(new BaseStats(75, 75, 80, 150, 110, 110))
+            .possibleMoves(List.of(tison, couleeArdente, fournaise, courantDAir, bourrasque, cyclone))
+            .dexNumber(8)
+            .talent(Talent.FRACAS)
+            .concept("Chauve-souris de cheminée, couverte de suie")
+            .frontSprite("/sprites/front/chimbat.png")
+            .backSprite("/sprites/back/chimbat.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Varanitor")
+            .frenchName("Varaniteur")
+            .types(List.of(Type.NATURE, Type.ROCK))
+            .stats(new BaseStats(95, 150, 110, 65, 80, 100))
+            .possibleMoves(List.of(epine, fouetDeRonces, grandeFloraison, gravillon, coupDeMoellon, failleTellurique))
+            .dexNumber(9)
+            .talent(Talent.RECUPERATION)
+            .concept("Varan couvert de mousse, qui surveille son territoire")
+            .frontSprite("/sprites/front/varanitor.png")
+            .backSprite("/sprites/back/varanitor.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Forbiddron")
+            .frenchName("Mormite")
+            .types(List.of(Type.VENOM, Type.SHADOW))
+            .stats(new BaseStats(100, 55, 85, 140, 120, 100))
+            .possibleMoves(List.of(aiguillon, crachatAcide, nueeVenimeuse, murmure, voileNoir, eclipse))
+            .dexNumber(10)
+            .talent(Talent.RECUPERATION)
+            .concept("Bonbon gluant sorti d'une marmite maudite")
+            .frontSprite("/sprites/front/forbiddron.png")
+            .backSprite("/sprites/back/forbiddron.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Tuffettry")
+            .frenchName("Poufêtonne")
+            .types(List.of(Type.ETHER))
+            .stats(new BaseStats(75, 60, 95, 150, 115, 105))
+            .possibleMoves(List.of(lueur, ondeMentale, comete, courantDAir, bourrasque, cyclone))
+            .dexNumber(11)
+            .talent(Talent.CARAPACE)
+            .coverageType(Type.WIND)
+            .concept("Pouf capitonné extravagant, toujours en fête")
+            .frontSprite("/sprites/front/tuffettry.png")
+            .backSprite("/sprites/back/tuffettry.png")
+            .build());
+        this.speciesList.add(new Species.Builder()
+            .originalName("Deember")
+            .frenchName("Décendre")
+            .types(List.of(Type.FIRE, Type.LIGHTNING))
+            .stats(new BaseStats(85, 60, 80, 150, 130, 95))
+            .possibleMoves(List.of(tison, couleeArdente, fournaise, gresillement, arcElectrique, orageSec))
+            .dexNumber(12)
+            .talent(Talent.DERNIER_SOUFFLE)
+            .concept("Braise de décembre, incandescente, qui crache des cendres")
+            .frontSprite("/sprites/front/deember.png")
+            .backSprite("/sprites/back/deember.png")
+            .build());
     }
 }

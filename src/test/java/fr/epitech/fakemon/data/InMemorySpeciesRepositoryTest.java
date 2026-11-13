@@ -10,6 +10,7 @@ import fr.epitech.fakemon.core.engine.TeamDrafter;
 import fr.epitech.fakemon.core.model.BaseStats;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Team;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,13 +21,16 @@ import org.junit.jupiter.api.Test;
 class InMemorySpeciesRepositoryTest {
 
     private Species createSpecies(String name) {
-        return new Species(
-            name,
-            name,
-            List.of(),
-            new BaseStats(100, 100, 100, 100, 100, 100),
-            List.of()
-        );
+        return new Species.Builder()
+            .originalName(name)
+            .frenchName(name)
+            .types(List.of())
+            .stats(new BaseStats(100, 100, 100, 100, 100, 100))
+            .possibleMoves(List.of())
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/test.png")
+            .backSprite("/sprites/back/test.png")
+            .build();
     }
 
     @Test
