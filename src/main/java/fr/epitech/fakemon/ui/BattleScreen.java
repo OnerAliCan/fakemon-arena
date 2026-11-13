@@ -1,6 +1,5 @@
 package fr.epitech.fakemon.ui;
 
-import java.util.List;
 import java.util.Objects;
 
 import fr.epitech.fakemon.core.api.BattleEvent;

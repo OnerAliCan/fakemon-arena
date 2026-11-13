@@ -22,7 +22,8 @@ public interface Opponent {
     );
 
     /**
-     * Demande à l'adversaire quel mon envoyer : son premier mon en combat construit, ou un remplaçant après un KO.
+     * Demande à l'adversaire quel Fakemon envoyer pour remplacer son Fakemon KO.
+     * Son premier Fakemon n'est pas demandé : c'est toujours le premier de son équipe.
      *
      * @param standingFakemonList ses mons encore debout
      * @return l'action choisie
