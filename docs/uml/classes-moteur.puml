@@ -96,10 +96,14 @@ package "core.engine" {
     --
     + les 4 méthodes de BattleEngine
     + les 3 méthodes de BattleState
-    - resolveTurn(opponentMove, playerMove) : void
+    - resolveTurn(opponentAction, playerAction) : void
+    - fasterSide() : Side
     - useMove(side, move) : void
     - sendFakemon(side, fakemon) : void
+    - checkCanEnter(side, fakemon) : void
+    - chooseOpponentReplacement() : Fakemon
     - applyEndOfTurn() : void
+    - startNextTurn() : void
     - notifyListeners(event) : void
   }
 

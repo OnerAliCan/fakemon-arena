@@ -112,9 +112,13 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
     /**
      * Reçoit l'action du joueur et fait avancer le combat.
      * En attente du premier mon, seul un envoi de mon est accepté : les deux mons entrent en jeu et le tour 1 commence.
-     * En attente d'une action, seule une attaque est acceptée : l'arbitre demande son action à l'adversaire et joue le tour.
+     * En attente d'une action, une attaque ou un changement de Fakemon est accepté :
+     * l'arbitre demande son action à l'adversaire et joue le tour.
+     * En attente d'un remplaçant, seul un envoi de Fakemon est accepté. Si le Fakemon de l'adversaire
+     * est KO lui aussi, son remplaçant entre en même temps, le plus rapide d'abord. Puis le tour suivant commence.
      *
-     * @throws IllegalStateException si l'arbitre n'attend pas cette action à ce moment-là
+     * @throws IllegalStateException si l'arbitre n'attend pas cette action à ce moment-là,
+     *     ou si le Fakemon envoyé ne peut pas entrer en jeu
      */
     @Override
     public void submitAction(PlayerAction playerAction) {
@@ -126,58 +130,126 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
             notifyListeners(new FakemonEnteredEvent(Side.OPPONENT, activeOpponentFakemon));
             notifyListeners(new TurnStartedEvent(turnNumber));
             phase = BattlePhase.WAITING_ACTION;
-        }else if (playerAction instanceof UseMove useMove && phase == BattlePhase.WAITING_ACTION ) {
+        } else if (phase == BattlePhase.WAITING_ACTION
+                && (playerAction instanceof UseMove || playerAction instanceof SendFakemon)) {
+            if (playerAction instanceof SendFakemon playerSend) {
+                checkCanEnter(Side.PLAYER, playerSend.getFakemon());
+            }
             PlayerAction opponentAction = opponent.chooseAction(
                 activeOpponentFakemon.getMoves(),
                 opponentTeam.getStandingFakemons()
             );
-            UseMove opponentUseMove = (UseMove) opponentAction;
-            resolveTurn(opponentUseMove.getMove(), useMove.getMove());
+            if (opponentAction instanceof SendFakemon opponentSend) {
+                checkCanEnter(Side.OPPONENT, opponentSend.getFakemon());
+            }
+            resolveTurn(opponentAction, playerAction);
+        } else if (playerAction instanceof SendFakemon playerSend && phase == BattlePhase.WAITING_REPLACEMENT) {
+            checkCanEnter(Side.PLAYER, playerSend.getFakemon());
+            if (activeOpponentFakemon.isFainted()) {
+                Fakemon opponentReplacement = chooseOpponentReplacement();
+                if (fasterSide() == Side.PLAYER) {
+                    sendFakemon(Side.PLAYER, playerSend.getFakemon());
+                    sendFakemon(Side.OPPONENT, opponentReplacement);
+                } else {
+                    sendFakemon(Side.OPPONENT, opponentReplacement);
+                    sendFakemon(Side.PLAYER, playerSend.getFakemon());
+                }
+            } else {
+                sendFakemon(Side.PLAYER, playerSend.getFakemon());
+            }
+            startNextTurn();
         } else {
             throw new IllegalStateException("Action non autorisée.");
         }
     }
 
     /**
-     * Joue un tour : choisit le camp qui attaque en premier, fait attaquer les deux camps, puis termine le tour.
-     * L'attaque de plus grande priorité passe d'abord ; à priorité égale, le mon le plus rapide ;
-     * à vitesse égale, le hasard du combat décide. Un mon mis KO avant son tour n'attaque pas.
+     * Joue un tour. Les changements de Fakemon passent d'abord : si les deux camps changent,
+     * le Fakemon le plus rapide sort en premier. Viennent ensuite les attaques : la plus grande priorité
+     * passe d'abord ; à priorité égale, le Fakemon le plus rapide ; à vitesse égale, le hasard du combat décide.
+     * Un Fakemon mis KO avant son tour n'attaque pas. Le tour se termine ensuite.
      *
-     * @param opponentMove l'attaque de l'adversaire
-     * @param playerMove l'attaque du joueur
+     * @param opponentAction l'action de l'adversaire : une attaque ou un changement
+     * @param playerAction l'action du joueur : une attaque ou un changement
      */
-    private void resolveTurn(Move opponentMove, Move playerMove) {
-        Side firstToPlay;
-        if (opponentMove.getPriority() > playerMove.getPriority()) {
-            firstToPlay = Side.OPPONENT;
-        } else if (opponentMove.getPriority() < playerMove.getPriority()) {
-            firstToPlay = Side.PLAYER;
-        } else {
-            if (activeOpponentFakemon.getStats().getSpeed() > activePlayerFakemon.getStats().getSpeed()) {
+    private void resolveTurn(PlayerAction opponentAction, PlayerAction playerAction) {
+        if (playerAction instanceof SendFakemon playerSend && opponentAction instanceof SendFakemon opponentSend) {
+            if (fasterSide() == Side.PLAYER) {
+                sendFakemon(Side.PLAYER, playerSend.getFakemon());
+                sendFakemon(Side.OPPONENT, opponentSend.getFakemon());
+            } else {
+                sendFakemon(Side.OPPONENT, opponentSend.getFakemon());
+                sendFakemon(Side.PLAYER, playerSend.getFakemon());
+            }
+        } else if (playerAction instanceof SendFakemon playerSend) {
+            sendFakemon(Side.PLAYER, playerSend.getFakemon());
+        } else if (opponentAction instanceof SendFakemon opponentSend) {
+            sendFakemon(Side.OPPONENT, opponentSend.getFakemon());
+        }
+
+        if (playerAction instanceof UseMove playerUse && opponentAction instanceof UseMove opponentUse) {
+            Move playerMove = playerUse.getMove();
+            Move opponentMove = opponentUse.getMove();
+            Side firstToPlay;
+            if (opponentMove.getPriority() > playerMove.getPriority()) {
                 firstToPlay = Side.OPPONENT;
-            } else if (activeOpponentFakemon.getStats().getSpeed() < activePlayerFakemon.getStats().getSpeed()) {
+            } else if (opponentMove.getPriority() < playerMove.getPriority()) {
                 firstToPlay = Side.PLAYER;
             } else {
-                if (random.nextBoolean()) {
-                    firstToPlay = Side.OPPONENT;
-                } else {
-                    firstToPlay = Side.PLAYER;
+                firstToPlay = fasterSide();
+            }
+
+            if (firstToPlay == Side.PLAYER) {
+                useMove(Side.PLAYER, playerMove);
+                if (!activeOpponentFakemon.isFainted()) {
+                    useMove(Side.OPPONENT, opponentMove);
+                }
+            } else {
+                useMove(Side.OPPONENT, opponentMove);
+                if (!activePlayerFakemon.isFainted()) {
+                    useMove(Side.PLAYER, playerMove);
                 }
             }
-        }
-    
-        if (firstToPlay == Side.PLAYER) {
-            useMove(Side.PLAYER, playerMove);
-            if (!activeOpponentFakemon.isFainted()) {
-                useMove(Side.OPPONENT, opponentMove);
-            }
-        } else {
-            useMove(Side.OPPONENT, opponentMove);
-            if (!activePlayerFakemon.isFainted()) {
-                useMove(Side.PLAYER, playerMove);
-            }
+        } else if (playerAction instanceof UseMove playerUse) {
+            useMove(Side.PLAYER, playerUse.getMove());
+        } else if (opponentAction instanceof UseMove opponentUse) {
+            useMove(Side.OPPONENT, opponentUse.getMove());
         }
         applyEndOfTurn();
+    }
+
+    /**
+     * Donne le camp dont le Fakemon sur le terrain est le plus rapide. À vitesse égale, le hasard du combat décide.
+     *
+     * @return le camp le plus rapide
+     */
+    private Side fasterSide() {
+        double playerSpeed = activePlayerFakemon.getStats().getSpeed();
+        double opponentSpeed = activeOpponentFakemon.getStats().getSpeed();
+        if (opponentSpeed > playerSpeed) {
+            return Side.OPPONENT;
+        } else if (opponentSpeed < playerSpeed) {
+            return Side.PLAYER;
+        } else if (random.nextBoolean()) {
+            return Side.OPPONENT;
+        }
+        return Side.PLAYER;
+    }
+
+    /**
+     * Vérifie qu'un Fakemon peut entrer en jeu pour un camp : il doit faire partie de son équipe,
+     * ne pas être KO, et ne pas être déjà sur le terrain.
+     *
+     * @param side le camp qui envoie le Fakemon
+     * @param fakemon le Fakemon envoyé
+     * @throws IllegalStateException si le Fakemon ne peut pas entrer en jeu
+     */
+    private void checkCanEnter(Side side, Fakemon fakemon) {
+        if (!getTeam(side).getFakemons().contains(fakemon)
+                || fakemon.isFainted()
+                || fakemon == getActiveFakemon(side)) {
+            throw new IllegalStateException("Ce Fakemon ne peut pas entrer en jeu.");
+        }
     }
 
     /**
@@ -231,10 +303,27 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
         notifyListeners(new FakemonFaintedEvent(targetSide, target));
     }
 }
-    
+
     /**
-     * Termine le tour. Si une équipe n'a plus de mon debout, le combat est fini et l'autre camp gagne.
-     * Si un mon sur le terrain est KO, l'arbitre attend un remplaçant. Sinon, le tour suivant commence.
+     * Met un Fakemon sur le terrain pour un camp et annonce son entrée en jeu.
+     *
+     * @param side le camp qui envoie le Fakemon
+     * @param fakemon le Fakemon qui entre
+     */
+    private void sendFakemon(Side side, Fakemon fakemon) {
+        if (side == Side.PLAYER) {
+            activePlayerFakemon = fakemon;
+        } else {
+            activeOpponentFakemon = fakemon;
+        }
+        notifyListeners(new FakemonEnteredEvent(side, fakemon));
+    }
+
+    /**
+     * Termine le tour. Si une équipe n'a plus de Fakemon debout, le combat est fini et l'autre camp gagne.
+     * Si le Fakemon du joueur est KO, l'arbitre lui demande un remplaçant et attend sa réponse.
+     * Si seul le Fakemon de l'adversaire est KO, son remplaçant entre tout de suite.
+     * Sinon, ou après ce remplacement, le tour suivant commence.
      */
     private void applyEndOfTurn() {
         if (!playerTeam.hasStandingFakemon()) {
@@ -243,12 +332,37 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
         } else if (!opponentTeam.hasStandingFakemon()) {
             notifyListeners(new BattleEndedEvent(Side.PLAYER, BattleEndReason.ALL_FAINTED));
             phase = BattlePhase.FINISHED;
-        } else if (activePlayerFakemon.isFainted() || activeOpponentFakemon.isFainted()) {
+        } else if (activePlayerFakemon.isFainted()) {
+            notifyListeners(new FakemonSelectionRequiredEvent(SelectionReason.REPLACEMENT));
             phase = BattlePhase.WAITING_REPLACEMENT;
+        } else if (activeOpponentFakemon.isFainted()) {
+            sendFakemon(Side.OPPONENT, chooseOpponentReplacement());
+            startNextTurn();
         } else {
-            turnNumber = turnNumber + 1;
-            notifyListeners(new TurnStartedEvent(turnNumber));
+            startNextTurn();
         }
+    }
+
+    /**
+     * Demande à l'adversaire son remplaçant, et vérifie qu'il peut entrer en jeu.
+     *
+     * @return le Fakemon choisi par l'adversaire
+     * @throws IllegalStateException si l'adversaire ne renvoie pas un envoi de Fakemon valide
+     */
+    private Fakemon chooseOpponentReplacement() {
+        PlayerAction opponentAction = opponent.chooseFakemon(opponentTeam.getStandingFakemons());
+        if (!(opponentAction instanceof SendFakemon opponentSend)) {
+            throw new IllegalStateException("L'adversaire doit envoyer un Fakemon.");
+        }
+        checkCanEnter(Side.OPPONENT, opponentSend.getFakemon());
+        return opponentSend.getFakemon();
+    }
+
+    /** Fait avancer le numéro du tour, annonce le nouveau tour, et attend l'action du joueur. */
+    private void startNextTurn() {
+        turnNumber = turnNumber + 1;
+        notifyListeners(new TurnStartedEvent(turnNumber));
+        phase = BattlePhase.WAITING_ACTION;
     }
 
 
