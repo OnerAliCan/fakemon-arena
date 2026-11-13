@@ -45,6 +45,11 @@ public class InMemorySpeciesRepository implements SpeciesRepository {
         speciesList.add(species);
     }
 
+    /** Initialise le catalogue à partir d'espèces déjà chargées. */
+    public InMemorySpeciesRepository(List<Species> species) {
+        this.speciesList = new ArrayList<>(species);
+    }
+
     public InMemorySpeciesRepository() {
         Move aiguillon = new Move("Aiguillon", Type.VENOM, MoveCategory.PHYSICAL, 40, 100, 1);
         Move crachatAcide = new Move("Crachat acide", Type.VENOM, MoveCategory.SPECIAL, 65, 100, 0);

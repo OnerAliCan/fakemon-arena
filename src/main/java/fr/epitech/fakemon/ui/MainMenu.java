@@ -1,6 +1,7 @@
 package fr.epitech.fakemon.ui;
 
 import fr.epitech.fakemon.App;
+import fr.epitech.fakemon.data.BundledRoster;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -44,8 +45,16 @@ public class MainMenu extends VBox {
         });
 
         combatButton.setOnAction(event -> {
-            BattleScreen battleScreen = new BattleScreen(sceneManager, this); // Crée une instance de BattleScreen
-            sceneManager.show(battleScreen); // Affiche l'écran de combat
+            VBox modes = new VBox(12);
+            modes.setAlignment(Pos.CENTER);
+            modes.getChildren().addAll(new Label("Combat contre l’IA"),
+                    ConstructedBattleScreen.button("Combat construit", () -> sceneManager.show(
+                            new TeamSelectionScreen(BundledRoster.load(), sceneManager,
+                                    () -> sceneManager.show(modes), () -> sceneManager.show(this)))),
+                    ConstructedBattleScreen.button("Combat aléatoire",
+                            () -> sceneManager.show(new BattleScreen(sceneManager, this))),
+                    ConstructedBattleScreen.button("Retour au menu principal", () -> sceneManager.show(this)));
+            sceneManager.show(modes);
         });
 
         VBox mondexMenu = new VBox(15);
