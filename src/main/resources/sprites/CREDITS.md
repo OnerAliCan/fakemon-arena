@@ -65,6 +65,7 @@ Créatures issues de la collection communautaire [Mongratis](https://pokengine.o
 ## Tuffettry
 - Page : https://pokengine.org/mons/00suxzsk/Tuffettry?collection=107s7x9x
 - Propriétaire : Plouton
+- Designer : [Magiscarf](https://pokengine.org/search?query=mons+designer:magiscarf)
 - Notes : Concept, design, name, type, and sprites by [Magiscarf](https://www.deviantart.com/magiscarf/art/Sprite-Sheet-w-Backsprites-w-Shinies-WIP-834432339) on Deviant Art Originally made for Magiscarf's Calta Dex. Tuffettry (tuffet + taffeta + fête + upholstery) Evo Line: Complete
 
 ## Deember
@@ -76,6 +77,7 @@ Créatures issues de la collection communautaire [Mongratis](https://pokengine.o
 ## Kankersaur
 - Page : https://pokengine.org/mons/00w9i8sw/Kankersaur?collection=107s7x9x
 - Propriétaire : Plouton
+- Designer : [Magiscarf](https://pokengine.org/search?query=mons+designer:magiscarf)
 - Notes : Concept, design, name, type, sprites, and dex entry by [Magiscarf](https://www.deviantart.com/magiscarf/art/Sprite-Sheet-w-Backsprites-w-Shinies-WIP-834432339) on Deviant Art Originally made for Magiscarf's Calta Dex. Evo Line: Complete
 
 ## Nuenflu
