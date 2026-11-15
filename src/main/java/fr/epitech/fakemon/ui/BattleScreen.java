@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Locale;
+import java.util.List;
 
 import fr.epitech.fakemon.core.api.BattleEvent;
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
@@ -19,6 +20,8 @@ import fr.epitech.fakemon.core.api.TurnStartedEvent;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.Type;
+import fr.epitech.fakemon.core.model.Team;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -36,7 +39,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 /** Écran de démonstration : affiche les événements du contrat sans moteur de combat. */
-public class BattleScreen extends BorderPane implements BattleListener {
+public class BattleScreen extends BorderPane implements Battleener {
     private final TextArea battleLog = new TextArea();
     private final ProgressBar playerHpBar = new ProgressBar();
     private final ProgressBar opponentHpBar = new ProgressBar();
@@ -211,7 +214,7 @@ public class BattleScreen extends BorderPane implements BattleListener {
         if (event instanceof BattleEndedEvent) {
             ended = true;
             BattleEndedEvent result = (BattleEndedEvent) event;
-            sceneManager.showBattleResult(result.getWinner(), result.getReason(), turnNumber, demo.playerTeam, mainMenu);
+            sceneManager.showBattleResult(result.getWinner(), result.getReason(), turnNumber, new Team(demo.playerTeam), mainMenu);
         } else if (event instanceof TurnStartedEvent) {
             turnNumber = ((TurnStartedEvent) event).getTurnNumber();
             appendLog("Tour " + ((TurnStartedEvent) event).getTurnNumber());
