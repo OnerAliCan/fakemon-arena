@@ -40,30 +40,37 @@ public class Species {
         this.cry = builder.cry;
     }
 
+    /** @return le nom d'origine utilisé dans le catalogue */
     public String getOriginalName() {
         return this.originalName;
     }
 
+    /** @return le nom français affiché au joueur */
     public String getFrenchName() {
         return this.frenchName;
     }
 
+    /** @return les types du Fakemon */
     public List<Type> getTypes() {
         return this.types;
     }
 
+    /** @return les statistiques de base */
     public Stats getStats() {
         return this.stats;
     }
 
+    /** @return les attaques que le Fakemon peut apprendre */
     public List<Move> getPossibleMoves() {
         return this.possibleMoves;
     }
 
+    /** @return le numéro du Fakemon dans le Mondex */
     public int getDexNumber() {
         return this.dexNumber;
     }
 
+    /** @return le talent du Fakemon */
     public Talent getTalent() {
         return this.talent;
     }
@@ -83,10 +90,12 @@ public class Species {
         return this.designer;
     }
 
+    /** @return le chemin du sprite de face */
     public String getFrontSprite() {
         return this.frontSprite;
     }
 
+    /** @return le chemin du sprite de dos */
     public String getBackSprite() {
         return this.backSprite;
     }
@@ -117,66 +126,144 @@ public class Species {
         private String backSprite;
         private String cry;
 
+        /**
+         * Renseigne le nom d'origine.
+         *
+         * @param originalName le nom d'origine
+         * @return ce constructeur
+         */
         public Builder originalName(String originalName) {
             this.originalName = originalName;
             return this;
         }
 
+        /**
+         * Renseigne le nom français.
+         *
+         * @param frenchName le nom français
+         * @return ce constructeur
+         */
         public Builder frenchName(String frenchName) {
             this.frenchName = frenchName;
             return this;
         }
 
+        /**
+         * Renseigne les types du Fakemon.
+         *
+         * @param types les types du Fakemon
+         * @return ce constructeur
+         */
         public Builder types(List<Type> types) {
             this.types = types;
             return this;
         }
 
+        /**
+         * Renseigne les statistiques de base.
+         *
+         * @param stats les statistiques de base
+         * @return ce constructeur
+         */
         public Builder stats(Stats stats) {
             this.stats = stats;
             return this;
         }
 
+        /**
+         * Renseigne les attaques possibles.
+         *
+         * @param possibleMoves les attaques possibles
+         * @return ce constructeur
+         */
         public Builder possibleMoves(List<Move> possibleMoves) {
             this.possibleMoves = possibleMoves;
             return this;
         }
 
+        /**
+         * Renseigne le numéro dans le Mondex.
+         *
+         * @param dexNumber le numéro dans le Mondex
+         * @return ce constructeur
+         */
         public Builder dexNumber(int dexNumber) {
             this.dexNumber = dexNumber;
             return this;
         }
 
+        /**
+         * Renseigne le talent du Fakemon.
+         *
+         * @param talent le talent du Fakemon
+         * @return ce constructeur
+         */
         public Builder talent(Talent talent) {
             this.talent = talent;
             return this;
         }
 
+        /**
+         * Renseigne le type de couverture facultatif.
+         *
+         * @param coverageType le type de couverture facultatif
+         * @return ce constructeur
+         */
         public Builder coverageType(Type coverageType) {
             this.coverageType = coverageType;
             return this;
         }
 
+        /**
+         * Renseigne le concept facultatif.
+         *
+         * @param concept le concept facultatif
+         * @return ce constructeur
+         */
         public Builder concept(String concept) {
             this.concept = concept;
             return this;
         }
 
+        /**
+         * Renseigne le designer, s'il est renseigné.
+         *
+         * @param designer le designer, s'il est renseigné
+         * @return ce constructeur
+         */
         public Builder designer(String designer) {
             this.designer = designer;
             return this;
         }
 
+        /**
+         * Renseigne le chemin du sprite de face.
+         *
+         * @param frontSprite le chemin du sprite de face
+         * @return ce constructeur
+         */
         public Builder frontSprite(String frontSprite) {
             this.frontSprite = frontSprite;
             return this;
         }
 
+        /**
+         * Renseigne le chemin du sprite de dos.
+         *
+         * @param backSprite le chemin du sprite de dos
+         * @return ce constructeur
+         */
         public Builder backSprite(String backSprite) {
             this.backSprite = backSprite;
             return this;
         }
 
+        /**
+         * Renseigne le chemin du cri, s'il est renseigné.
+         *
+         * @param cry le chemin du cri, s'il est renseigné
+         * @return ce constructeur
+         */
         public Builder cry(String cry) {
             this.cry = cry;
             return this;
