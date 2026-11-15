@@ -17,7 +17,7 @@ public class App extends Application {
     public void start(Stage stage) {
         Scene scene = new Scene(new StackPane(), 960, 540);
         SceneManager sceneManager = new SceneManager(scene);
-        sceneManager.show(new MainMenu(sceneManager));
+        sceneManager.show(new MainMenu(sceneManager, getHostServices()::showDocument));
 
         stage.setTitle(TITLE);
         stage.setScene(scene);
