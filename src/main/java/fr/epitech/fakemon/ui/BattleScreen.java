@@ -3,7 +3,6 @@ package fr.epitech.fakemon.ui;
 import java.util.Random;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Locale;
 import java.util.List;
 
 import fr.epitech.fakemon.core.api.BattleEvent;
@@ -39,7 +38,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 /** Écran de démonstration : affiche les événements du contrat sans moteur de combat. */
-public class BattleScreen extends BorderPane implements Battleener {
+public class BattleScreen extends BorderPane implements BattleListener {
     private final TextArea battleLog = new TextArea();
     private final ProgressBar playerHpBar = new ProgressBar();
     private final ProgressBar opponentHpBar = new ProgressBar();
@@ -50,7 +49,6 @@ public class BattleScreen extends BorderPane implements Battleener {
     private final MainMenu mainMenu;
     private int turnNumber;
     private boolean ended;
-    private final BattleDemo demo = new BattleDemo();
     private final StackPane arena = new StackPane();
     private final Button backButton = new Button("Retour au menu");
     private final Button teamButton = new Button("Équipe");
@@ -72,19 +70,13 @@ public class BattleScreen extends BorderPane implements Battleener {
         forfeitButton.setOnAction(event -> {
             for (BattleEvent battleEvent : demo.forfeit()) { onEvent(battleEvent); }
         });
-        HBox header = new HBox(20, backButton, forfeitButton, new Label("Combat de démonstration — données factices"));
         teamButton.setOnAction(event -> showTeamPanel(false));
-        HBox header = new HBox(20, backButton, teamButton, new Label("Combat de démonstration — données factices"));
+        HBox header = new HBox(20, backButton, teamButton, forfeitButton, new Label("Combat de démonstration — données factices"));
         header.setAlignment(Pos.CENTER_LEFT);
         setTop(header);
 
         // Les panneaux partagent la hauteur disponible au lieu de s'empiler.
-        StackPane arena = new StackPane();
         VBox opponentPanel = createFakemonPanel(demo.opponent, "front/" + demo.opponent.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png",
-                opponentHpBar, opponentHpLabel, 96);
-        VBox playerPanel = createFakemonPanel(demo.player, "back/" + demo.player.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png",
-                playerHpBar, playerHpLabel, 112);
-        VBox opponentPanel = createFakemonPanel(demo.opponent, "front/forbiddron.png",
                 opponentHpBar, opponentHpLabel, 96);
         StackPane.setAlignment(opponentPanel, Pos.TOP_RIGHT);
         arena.getChildren().add(opponentPanel);

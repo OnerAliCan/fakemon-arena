@@ -1,11 +1,16 @@
 package fr.epitech.fakemon.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import fr.epitech.fakemon.core.api.BattleEndedEvent;
+import fr.epitech.fakemon.core.api.BattleEndReason;
+import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
 import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
@@ -53,10 +58,32 @@ class BattleDemoTest {
         for (int index = 0; index < 3; index++) {
             demo.play(0);
         }
-        assertEquals(0, demo.pp[0]);
+        var lastTurn = demo.play(0);
+        assertInstanceOf(FakemonFaintedEvent.class, lastTurn.get(lastTurn.size() - 2));
+        assertEquals(SelectionReason.REPLACEMENT,
+                assertInstanceOf(FakemonSelectionRequiredEvent.class, lastTurn.getLast()).getReason());
+        assertEquals(0, fainted.getCurrentHp());
+        assertFalse(demo.canAct());
+        assertTrue(demo.play(1).isEmpty());
+        var replacement = demo.playerTeam.get(1);
+        var entered = demo.send(new SendFakemon(replacement));
+        assertEquals(1, entered.size());
+        assertSame(replacement, assertInstanceOf(FakemonEnteredEvent.class, entered.getFirst()).getFakemon());
+        assertEquals(replacement.getMaxHp(), replacement.getCurrentHp());
+        assertTrue(demo.send(new SendFakemon(fainted)).isEmpty());
+        assertEquals(5, assertInstanceOf(TurnStartedEvent.class, demo.play(0).getFirst()).getTurnNumber());
+    }
+
+    @Test
+    void victoryStopsTheScenario() {
+        BattleDemo demo = new BattleDemo(new java.util.Random(42));
+        for (int index = 0; index < 4; index++) {
+            demo.play(0);
+        }
+        assertEquals(0, demo.remainingPp(0));
         assertTrue(demo.play(0).isEmpty());
         var events = demo.play(1);
-        BattleEndedEvent result = (BattleEndedEvent) events.get(3);
+        BattleEndedEvent result = (BattleEndedEvent) events.getLast();
         assertEquals(Side.PLAYER, result.getWinner());
         assertEquals(0, demo.opponent.getCurrentHp());
         assertTrue(demo.play(1).isEmpty());
@@ -79,34 +106,21 @@ class BattleDemoTest {
         BattleDemo first = new BattleDemo(new java.util.Random(42));
         BattleDemo second = new BattleDemo(new java.util.Random(43));
         first.play(0);
-        assertEquals(6, second.playerTeam.getFakemons().size());
-        assertEquals(6, second.opponentTeam.getFakemons().size());
+        assertEquals(6, second.playerTeam.size());
+        assertEquals(6, second.opponentTeam.size());
         java.util.Set<String> names = new java.util.HashSet<>();
-        for (var mon : second.playerTeam.getFakemons()) {
+        for (var mon : second.playerTeam) {
             assertTrue(names.add(mon.getSpecies().getOriginalName()));
             assertEquals(mon.getMaxHp(), mon.getCurrentHp());
         }
-        for (var mon : second.opponentTeam.getFakemons()) {
+        for (var mon : second.opponentTeam) {
             assertTrue(names.add(mon.getSpecies().getOriginalName()));
             assertEquals(mon.getMaxHp(), mon.getCurrentHp());
         }
         assertEquals(0, second.getTurn());
-        assertEquals(4, second.pp[0]);
-        assertNotSame(first.player, second.player);
-        assertNotEquals(first.player.getSpecies().getOriginalName(), second.player.getSpecies().getOriginalName());
-        var lastTurn = demo.play(0);
-        assertInstanceOf(FakemonFaintedEvent.class, lastTurn.get(lastTurn.size() - 2));
-        assertEquals(SelectionReason.REPLACEMENT,
-                assertInstanceOf(FakemonSelectionRequiredEvent.class, lastTurn.getLast()).getReason());
-        assertEquals(0, fainted.getCurrentHp());
-        assertFalse(demo.canAct());
-        assertTrue(demo.play(1).isEmpty());
-        var replacement = demo.playerTeam.get(1);
-        var entered = demo.send(new SendFakemon(replacement));
-        assertEquals(1, entered.size());
-        assertSame(replacement, assertInstanceOf(FakemonEnteredEvent.class, entered.getFirst()).getFakemon());
-        assertEquals(replacement.getMaxHp(), replacement.getCurrentHp());
-        assertTrue(demo.send(new SendFakemon(fainted)).isEmpty());
-        assertEquals(5, assertInstanceOf(TurnStartedEvent.class, demo.play(0).getFirst()).getTurnNumber());
+        assertEquals(4, second.remainingPp(0));
+        assertNotSame(first.activePlayer(), second.activePlayer());
+        assertNotEquals(first.playerTeam.stream().map(mon -> mon.getSpecies().getOriginalName()).toList(),
+                second.playerTeam.stream().map(mon -> mon.getSpecies().getOriginalName()).toList());
     }
 }
