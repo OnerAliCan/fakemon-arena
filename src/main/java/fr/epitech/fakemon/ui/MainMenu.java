@@ -54,7 +54,7 @@ public class MainMenu extends VBox {
                             new TeamSelectionScreen(BundledRoster.load(), sceneManager,
                                     () -> sceneManager.show(modes), () -> sceneManager.show(this)))),
                     ConstructedBattleScreen.button("Combat aléatoire",
-                            () -> sceneManager.show(new BattleScreen(sceneManager, this))),
+                            () -> sceneManager.show(new TeamPreviewScreen(sceneManager, this))),
                     ConstructedBattleScreen.button("Retour au menu principal", () -> sceneManager.show(this)));
             sceneManager.show(modes);
         });

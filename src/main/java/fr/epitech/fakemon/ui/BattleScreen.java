@@ -44,7 +44,7 @@ public class BattleScreen extends BorderPane implements BattleListener {
     private final ProgressBar opponentHpBar = new ProgressBar();
     private final Label playerHpLabel = new Label();
     private final Label opponentHpLabel = new Label();
-    private final BattleDemo demo = new BattleDemo(new Random());
+    private final BattleDemo demo;
     private final SceneManager sceneManager;
     private final MainMenu mainMenu;
     private int turnNumber;
@@ -52,7 +52,7 @@ public class BattleScreen extends BorderPane implements BattleListener {
     private final StackPane arena = new StackPane();
     private final Button backButton = new Button("Retour au menu");
     private final Button teamButton = new Button("Équipe");
-    private final Button[] attackButtons = new Button[demo.moves.size()];
+    private final Button[] attackButtons;
     private final HBox controls;
     private VBox playerPanel;
 
@@ -62,6 +62,12 @@ public class BattleScreen extends BorderPane implements BattleListener {
      * @param mainMenu menu à retrouver au retour
      */
     public BattleScreen(SceneManager sceneManager, MainMenu mainMenu) {
+        this(sceneManager, mainMenu, new BattleDemo(new Random()));
+    }
+
+    BattleScreen(SceneManager sceneManager, MainMenu mainMenu, BattleDemo demo) {
+        this.demo = demo;
+        this.attackButtons = new Button[demo.moves.size()];
         this.sceneManager = sceneManager;
         this.mainMenu = mainMenu;
         setPadding(new Insets(12));
