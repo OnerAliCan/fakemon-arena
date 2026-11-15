@@ -1,11 +1,17 @@
 package fr.epitech.fakemon.ui;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Locale;
 
 import fr.epitech.fakemon.core.api.BattleEvent;
 import fr.epitech.fakemon.core.api.BattleListener;
+import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
+import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
+import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
 import fr.epitech.fakemon.core.api.HpLostEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
+import fr.epitech.fakemon.core.api.SelectionReason;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
 import fr.epitech.fakemon.core.model.Fakemon;
@@ -35,6 +41,12 @@ public class BattleScreen extends BorderPane implements BattleListener {
     private final Label playerHpLabel = new Label();
     private final Label opponentHpLabel = new Label();
     private final BattleDemo demo = new BattleDemo();
+    private final StackPane arena = new StackPane();
+    private final Button backButton = new Button("Retour au menu");
+    private final Button teamButton = new Button("Équipe");
+    private final Button[] attackButtons = new Button[demo.moves.size()];
+    private final HBox controls;
+    private VBox playerPanel;
 
     /**
      * Construit l'écran de combat sur des données factices.
@@ -43,21 +55,18 @@ public class BattleScreen extends BorderPane implements BattleListener {
      */
     public BattleScreen(SceneManager sceneManager, MainMenu mainMenu) {
         setPadding(new Insets(12));
-        Button backButton = new Button("Retour au menu");
         backButton.setOnAction(event -> sceneManager.show(mainMenu));
-        HBox header = new HBox(20, backButton, new Label("Combat de démonstration — données factices"));
+        teamButton.setOnAction(event -> showTeamPanel(false));
+        HBox header = new HBox(20, backButton, teamButton, new Label("Combat de démonstration — données factices"));
         header.setAlignment(Pos.CENTER_LEFT);
         setTop(header);
 
         // Les panneaux partagent la hauteur disponible au lieu de s'empiler.
-        StackPane arena = new StackPane();
         VBox opponentPanel = createFakemonPanel(demo.opponent, "front/forbiddron.png",
                 opponentHpBar, opponentHpLabel, 96);
-        VBox playerPanel = createFakemonPanel(demo.player, "back/koaninja.png",
-                playerHpBar, playerHpLabel, 112);
         StackPane.setAlignment(opponentPanel, Pos.TOP_RIGHT);
-        StackPane.setAlignment(playerPanel, Pos.BOTTOM_LEFT);
-        arena.getChildren().addAll(opponentPanel, playerPanel);
+        arena.getChildren().add(opponentPanel);
+        showActivePlayer(demo.activePlayer());
         arena.setPadding(new Insets(12));
         setCenter(arena);
 
@@ -67,16 +76,14 @@ public class BattleScreen extends BorderPane implements BattleListener {
         for (int index = 0; index < demo.moves.size(); index++) {
             final int moveIndex = index;
             Button button = new Button();
+            attackButtons[index] = button;
             updateAttackButton(button, index);
             button.setPrefWidth(250);
             button.setMinHeight(68);
             button.setWrapText(true);
             button.setStyle("-fx-font-size: 11px; -fx-base: " + typeColor(demo.moves.get(index).getType()) + ";");
             button.setOnAction(event -> {
-                for (BattleEvent battleEvent : demo.play(moveIndex)) {
-                    onEvent(battleEvent);
-                }
-                updateAttackButton(button, moveIndex);
+                showEvents(demo.play(moveIndex));
             });
             attacksPanel.add(button, index % 2, index / 2);
         }
@@ -86,12 +93,56 @@ public class BattleScreen extends BorderPane implements BattleListener {
         battleLog.setPrefWidth(350);
         battleLog.setMinWidth(0);
         battleLog.setPrefHeight(120);
-        HBox controls = new HBox(12, attacksPanel, battleLog);
+        controls = new HBox(12, attacksPanel, battleLog);
         HBox.setHgrow(battleLog, Priority.ALWAYS);
         setBottom(controls);
-        updateHp(Side.PLAYER, demo.player.getCurrentHp(), demo.player.getMaxHp());
         updateHp(Side.OPPONENT, demo.opponent.getCurrentHp(), demo.opponent.getMaxHp());
         appendLog("Choisissez une attaque. La quatrième illustre une attaque sans PP.");
+    }
+
+    private void showTeamPanel(boolean required) {
+        TeamPanel panel = new TeamPanel(demo.playerTeam, demo.activePlayer(), required, action -> {
+            List<BattleEvent> events = demo.send(action);
+            if (!events.isEmpty()) {
+                closeTeamPanel();
+                showEvents(events);
+            }
+        }, this::closeTeamPanel);
+        setCenter(new StackPane(panel));
+        setBottom(null);
+        teamButton.setDisable(true);
+        backButton.setDisable(required);
+    }
+
+    private void closeTeamPanel() {
+        setCenter(arena);
+        setBottom(controls);
+        backButton.setDisable(false);
+        updateControls();
+    }
+
+    private void showEvents(List<BattleEvent> events) {
+        for (BattleEvent event : events) {
+            onEvent(event);
+        }
+        updateControls();
+    }
+
+    private void updateControls() {
+        for (int index = 0; index < attackButtons.length; index++) {
+            updateAttackButton(attackButtons[index], index);
+        }
+        teamButton.setDisable(getCenter() != arena || !demo.canAct()
+                || demo.playerTeam.stream().noneMatch(demo::canSelect));
+    }
+
+    private void showActivePlayer(Fakemon active) {
+        arena.getChildren().remove(playerPanel);
+        String path = "back/" + active.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png";
+        playerPanel = createFakemonPanel(active, path, playerHpBar, playerHpLabel, 112);
+        StackPane.setAlignment(playerPanel, Pos.BOTTOM_LEFT);
+        arena.getChildren().add(playerPanel);
+        updateHp(Side.PLAYER, active.getCurrentHp(), active.getMaxHp());
     }
 
     private VBox createFakemonPanel(Fakemon fakemon, String spritePath,
@@ -114,10 +165,10 @@ public class BattleScreen extends BorderPane implements BattleListener {
 
     private void updateAttackButton(Button button, int index) {
         Move move = demo.moves.get(index);
-        button.setText(move.getName() + " — " + move.getType() + " — PP " + demo.pp[index] + "/" + demo.maxPp[index]
+        button.setText(move.getName() + " — " + move.getType() + " — PP " + demo.remainingPp(index) + "/4"
                 + "\n" + move.getCategory() + " • Puissance " + move.getPower()
                 + " • Précision " + move.getAccuracy() + "%" + (move.getPriority() > 0 ? " • rapide" : ""));
-        button.setDisable(demo.pp[index] == 0);
+        button.setDisable(!demo.canAct() || demo.remainingPp(index) == 0);
     }
 
     private void updateHp(Side side, int hp, int maxHp) {
@@ -146,6 +197,14 @@ public class BattleScreen extends BorderPane implements BattleListener {
             HpLostEvent damage = (HpLostEvent) event;
             updateHp(damage.getSide(), damage.getRemainingHp(), damage.getFakemon().getMaxHp());
             appendLog(damage.getFakemon().getSpecies().getFrenchName() + " perd " + damage.getHpLost() + " PV.");
+        } else if (event instanceof FakemonFaintedEvent fainted) {
+            appendLog(fainted.getFakemon().getSpecies().getFrenchName() + " est K.O.");
+        } else if (event instanceof FakemonSelectionRequiredEvent selection
+                && selection.getReason() == SelectionReason.REPLACEMENT) {
+            showTeamPanel(true);
+        } else if (event instanceof FakemonEnteredEvent entered && entered.getSide() == Side.PLAYER) {
+            showActivePlayer(entered.getFakemon());
+            appendLog(entered.getFakemon().getSpecies().getFrenchName() + " entre en jeu.");
         }
     }
 
