@@ -7,6 +7,7 @@ import java.util.List;
 
 import fr.epitech.fakemon.core.api.BattleEvent;
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
+import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.BattleListener;
 import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
 import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
@@ -27,6 +28,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -45,8 +48,6 @@ public class BattleScreen extends BorderPane implements BattleListener {
     private final Label playerHpLabel = new Label();
     private final Label opponentHpLabel = new Label();
     private final BattleDemo demo;
-    private final SceneManager sceneManager;
-    private final MainMenu mainMenu;
     private int turnNumber;
     private boolean ended;
     private final StackPane arena = new StackPane();
@@ -55,6 +56,10 @@ public class BattleScreen extends BorderPane implements BattleListener {
     private final Button[] attackButtons;
     private final HBox controls;
     private VBox playerPanel;
+    private final SceneManager sceneManager;
+    private final MainMenu mainMenu;
+    private boolean paused;
+    private boolean resolving;
 
     /**
      * Construit l'écran de combat sur des données factices.
@@ -70,14 +75,35 @@ public class BattleScreen extends BorderPane implements BattleListener {
         this.attackButtons = new Button[demo.moves.size()];
         this.sceneManager = sceneManager;
         this.mainMenu = mainMenu;
+        setFocusTraversable(true);
+        addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
+                event.consume();
+                if (paused) {
+                    resumeBattle();
+                } else if (getCenter() == arena && !resolving && demo.canAct()) {
+                    pauseBattle();
+                }
+            }
+        });
+        sceneProperty().addListener((property, previous, current) -> {
+            if (current != null) {
+                javafx.application.Platform.runLater(() -> {
+                    if (getScene() == current) {
+                        requestFocus();
+                    }
+                });
+            }
+        });
         setPadding(new Insets(12));
-        backButton.setOnAction(event -> sceneManager.show(mainMenu));
-        Button forfeitButton = new Button("Abandonner");
-        forfeitButton.setOnAction(event -> {
-            for (BattleEvent battleEvent : demo.forfeit()) { onEvent(battleEvent); }
+        backButton.setText("Pause");
+        backButton.setOnAction(event -> {
+            if (getCenter() == arena && !resolving && demo.canAct()) {
+                pauseBattle();
+            }
         });
         teamButton.setOnAction(event -> showTeamPanel(false));
-        HBox header = new HBox(20, backButton, teamButton, forfeitButton, new Label("Combat de démonstration — données factices"));
+        HBox header = new HBox(20, backButton, teamButton, new Label("Combat de démonstration — données factices"));
         header.setAlignment(Pos.CENTER_LEFT);
         setTop(header);
 
@@ -120,6 +146,23 @@ public class BattleScreen extends BorderPane implements BattleListener {
         appendLog("Choisissez une attaque. La quatrième illustre une attaque sans PP.");
     }
 
+    private void pauseBattle() {
+        paused = true;
+        BattlePausePanel pause = new BattlePausePanel(this::resumeBattle, sceneManager::showVolumeSettings,
+                () -> showEvents(demo.submitAction(new Forfeit())));
+        setCenter(pause);
+        setBottom(null);
+        backButton.setDisable(true);
+        teamButton.setDisable(true);
+        pause.focusResume();
+    }
+
+    private void resumeBattle() {
+        paused = false;
+        closeTeamPanel();
+        requestFocus();
+    }
+
     private void showTeamPanel(boolean required) {
         TeamPanel panel = new TeamPanel(demo.playerTeam, demo.activePlayer(), required, action -> {
             List<BattleEvent> events = demo.send(action);
@@ -131,7 +174,7 @@ public class BattleScreen extends BorderPane implements BattleListener {
         setCenter(new StackPane(panel));
         setBottom(null);
         teamButton.setDisable(true);
-        backButton.setDisable(required);
+        backButton.setDisable(true);
     }
 
     private void closeTeamPanel() {
@@ -142,16 +185,22 @@ public class BattleScreen extends BorderPane implements BattleListener {
     }
 
     private void showEvents(List<BattleEvent> events) {
-        for (BattleEvent event : events) {
-            onEvent(event);
+        resolving = true;
+        try {
+            for (BattleEvent event : events) {
+                onEvent(event);
+            }
+        } finally {
+            resolving = false;
+            updateControls();
         }
-        updateControls();
     }
 
     private void updateControls() {
         for (int index = 0; index < attackButtons.length; index++) {
             updateAttackButton(attackButtons[index], index);
         }
+        backButton.setDisable(getCenter() != arena || !demo.canAct());
         teamButton.setDisable(getCenter() != arena || !demo.canAct()
                 || demo.playerTeam.stream().noneMatch(demo::canSelect));
     }

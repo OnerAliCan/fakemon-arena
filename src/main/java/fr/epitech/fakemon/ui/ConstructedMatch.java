@@ -1,6 +1,10 @@
 package fr.epitech.fakemon.ui;
 
 import fr.epitech.fakemon.core.api.SpeciesRepository;
+import fr.epitech.fakemon.core.api.BattleEndReason;
+import fr.epitech.fakemon.core.api.BattleEndedEvent;
+import fr.epitech.fakemon.core.api.Forfeit;
+import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.engine.TeamDrafter;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
@@ -23,6 +27,16 @@ final class ConstructedMatch {
     final List<Fakemon> opponentTeam;
     Fakemon active;
     int turn;
+    private boolean forfeited;
+
+    /** Termine la démonstration par abandon sans jouer ni modifier les PV. */
+    BattleEndedEvent submitAction(Forfeit action) {
+        if (forfeited || active == null || active.isFainted() || opponent() == null) {
+            throw new IllegalStateException("Le combat n'attend pas d'action.");
+        }
+        forfeited = true;
+        return new BattleEndedEvent(Side.OPPONENT, BattleEndReason.FORFEIT);
+    }
 
     static ConstructedMatch start(SpeciesRepository roster, List<Species> selected, Random random) {
         if (selected.size() != 6 || selected.stream().map(Species::getOriginalName).distinct().count() != 6
@@ -56,7 +70,7 @@ final class ConstructedMatch {
     }
 
     boolean choose(Fakemon member) {
-        if (!playerTeam.contains(member) || member.isFainted() || member == active) {
+        if (forfeited || !playerTeam.contains(member) || member.isFainted() || member == active) {
             return false;
         }
         boolean voluntary = active != null && !active.isFainted();
@@ -70,7 +84,7 @@ final class ConstructedMatch {
 
     String attack(Move move) {
         Fakemon target = opponent();
-        if (active == null || active.isFainted() || target == null || !active.getMoves().contains(move)) {
+        if (forfeited || active == null || active.isFainted() || target == null || !active.getMoves().contains(move)) {
             return "";
         }
         turn++;

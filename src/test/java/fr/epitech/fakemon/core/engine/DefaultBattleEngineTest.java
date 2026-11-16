@@ -473,6 +473,25 @@ class DefaultBattleEngineTest {
     }
 
     @Test
+    void forfeitEndsBattleWithoutChangingHealth() {
+        Fakemon player = createFakemon("Alpha", FAST, WEAK);
+        Fakemon opponentMon = createFakemon("Gamma", SLOW, WEAK);
+        startDuel(player, opponentMon, NO_CRITICAL_SEED);
+        int turn = engine.getTurnNumber();
+        engine.submitAction(new fr.epitech.fakemon.core.api.Forfeit());
+
+        BattleEndedEvent result = listener.eventsOfType(BattleEndedEvent.class).getFirst();
+        assertEquals(Side.OPPONENT, result.getWinner());
+        assertEquals(BattleEndReason.FORFEIT, result.getReason());
+        assertEquals(turn, engine.getTurnNumber());
+        assertEquals(player.getMaxHp(), player.getCurrentHp());
+        assertEquals(opponentMon.getMaxHp(), opponentMon.getCurrentHp());
+        assertThrows(IllegalStateException.class, () ->
+            engine.submitAction(new fr.epitech.fakemon.core.api.Forfeit())
+        );
+    }
+
+    @Test
     void actionIsRefusedOnceBattleIsOver() {
         Fakemon player = createFakemon("Alpha", FAST, KNOCK_OUT);
         Fakemon opponentMon = createFakemon("Gamma", SLOW, WEAK);
