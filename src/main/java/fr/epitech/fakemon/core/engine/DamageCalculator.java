@@ -1,5 +1,9 @@
 package fr.epitech.fakemon.core.engine;
 
+import fr.epitech.fakemon.core.effects.Ability;
+import fr.epitech.fakemon.core.effects.Carapace;
+import fr.epitech.fakemon.core.effects.DernierSouffle;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
@@ -13,6 +17,8 @@ public class DamageCalculator {
 
     private final Random random;
     private final TypeChart typeChart;
+    private final Ability carapace = new Carapace();
+    private final Ability dernierSouffle = new DernierSouffle();
 
     /**
      * Crée le calculateur.
@@ -81,6 +87,12 @@ public class DamageCalculator {
         resultDamage = resultDamage * damageMultiplier;
         resultDamage = resultDamage * random.nextDouble(0.85, 1.00);
         resultDamage = resultDamage * multiplier;
+        double dealtMultiplier = dernierSouffle.dealtDamageMultiplier(attacker);
+        resultDamage *= dealtMultiplier;
+        Talent attackerTalent = dealtMultiplier > 1.0 ? Talent.DERNIER_SOUFFLE : null;
+        double receivedMultiplier = carapace.receivedDamageMultiplier(target, damageMultiplier);
+        resultDamage *= receivedMultiplier;
+        Talent defenderTalent = receivedMultiplier < 1.0 ? Talent.CARAPACE : null;
         int resultDamageInt = (int) resultDamage;
         if (resultDamageInt == 0 && damageMultiplier != 0) {
             resultDamageInt = 1;
@@ -88,7 +100,9 @@ public class DamageCalculator {
         DamageResult result = new DamageResult(
             resultDamageInt,
             critical,
-            damageMultiplier
+            damageMultiplier,
+            attackerTalent,
+            defenderTalent
         );
 
         return result;

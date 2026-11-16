@@ -66,8 +66,11 @@ package "core.engine" {
     - damage : int
     - critical : boolean
     - multiplier : double
+    - attackerTalent : Talent
+    - defenderTalent : Talent
     --
     + DamageResult(damage, critical, multiplier)
+    + DamageResult(damage, critical, multiplier, attackerTalent, defenderTalent)
     + getters
   }
 

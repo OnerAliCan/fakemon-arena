@@ -16,9 +16,11 @@ import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.HpLostEvent;
 import fr.epitech.fakemon.core.api.HpRestoredEvent;
 import fr.epitech.fakemon.core.api.MoveMissedEvent;
+import fr.epitech.fakemon.core.api.ItemActivatedEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
 import fr.epitech.fakemon.core.api.PlayerAction;
 import fr.epitech.fakemon.core.api.Side;
+import fr.epitech.fakemon.core.api.TalentActivatedEvent;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
 import fr.epitech.fakemon.core.api.UseMove;
 import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
@@ -178,6 +180,16 @@ public final class BattleScreen extends BorderPane implements BattleListener {
                 case NOT_VERY_EFFECTIVE -> "Ce n'est pas très efficace.";
                 case NO_EFFECT -> "L'attaque n'a aucun effet.";
             });
+        } else if (event instanceof ItemActivatedEvent activated) {
+            appendLog(name(activated.getFakemon()) + " bénéficie de " + activated.getItem().getDisplayName() + ".");
+        } else if (event instanceof TalentActivatedEvent activated) {
+            String talentName = switch (activated.getTalent()) {
+                case CARAPACE -> "Carapace";
+                case DERNIER_SOUFFLE -> "Dernier Souffle";
+                case FRACAS -> "Fracas";
+                case RECUPERATION -> "Récupération";
+            };
+            appendLog(name(activated.getFakemon()) + " active " + talentName + " !");
         } else if (event instanceof FakemonFaintedEvent fainted) {
             appendLog(name(fainted.getFakemon()) + " est K.O.");
         } else if (event instanceof FakemonSelectionRequiredEvent) {

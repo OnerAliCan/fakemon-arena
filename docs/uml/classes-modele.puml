@@ -91,6 +91,7 @@ package "core.model" {
     - moves : List<Move>
     - currentHp : int
     - item : Item
+    - battleStats : Stats
     --
     + Fakemon(species, moves)
     + getSpecies() : Species
@@ -102,6 +103,7 @@ package "core.model" {
     + takeDamage(damageTaken : int) : void
     + heal(healedHp : int) : void
     + getItem() : Item
+    + equip(item : Item) : void
   }
 
   class Team <<#8>> {
@@ -113,13 +115,13 @@ package "core.model" {
     + hasStandingFakemon() : boolean
   }
 
-  abstract class Item <<#24>> {
-    - name : String
-    # wrappedStats : Stats
+  enum Item <<#24>> {
+    GANTELET
+    ECU
+    PLUME
     --
-    # Item(name, wrappedStats)
-    + getName() : String
-    + les 6 méthodes de Stats, qui renvoient celles de wrappedStats
+    + getDisplayName() : String
+    + decorate(base : Stats) : Stats
   }
 
   enum Talent <<#22>> {
@@ -131,46 +133,33 @@ package "core.model" {
 }
 
 package "core.effects" {
-  class Gauntlet <<#24>> {
-    + Gauntlet(wrappedStats)
-    + getAttack() : double
-    + getSpecialAttack() : double
+  class ItemStats <<#24>> {
+    - base : Stats
+    - attack : double
+    - defense : double
+    - speed : double
+    + les 6 méthodes de Stats
   }
-  class Shield <<#24>> {
-    + Shield(wrappedStats)
-    + getDefense() : double
-    + getSpecialDefense() : double
+  abstract class Ability <<#24>> {
+    + receivedDamageMultiplier(defender, typeMultiplier) : double
+    + dealtDamageMultiplier(attacker) : double
+    + entryDamage(entrant, target) : int
+    + endOfTurnHeal(holder) : int
   }
-  class Feather <<#24>> {
-    + Feather(wrappedStats)
-    + getSpeed() : double
-  }
-
-  class Smash <<#24>> {
-    + Smash()
-    + entryDamage(target) : int
-  }
-  class Armor <<#24>> {
-    + Armor()
-    + damageReceivedMultiplier(effectiveness) : double
-  }
-  class LastBreath <<#24>> {
-    + LastBreath()
-    + damageDealtMultiplier(self) : double
-  }
-  class Recovery <<#24>> {
-    + Recovery()
-    + endOfTurnHeal(self) : int
-  }
+  class Carapace
+  class DernierSouffle
+  class Fracas
+  class Recuperation
 }
 
 BaseStats ..|> Stats
-Item ..|> Stats
-Item o--> "1" Stats : enveloppe
-Gauntlet --|> Item
-Shield --|> Item
-Feather --|> Item
-
+ItemStats ..|> Stats
+ItemStats o--> "1" Stats : enveloppe
+Item ..> ItemStats : crée
+Carapace --|> Ability
+DernierSouffle --|> Ability
+Fracas --|> Ability
+Recuperation --|> Ability
 
 SpeciesBuilder ..> Species : construit
 Species --> "1" Stats
@@ -179,15 +168,16 @@ Species --> "4..*" Move : possibleMoves
 Species --> "1" Talent
 Fakemon --> "1" Species
 Fakemon --> "4" Move : moves
-Fakemon --> "1" Item
+Fakemon --> "0..1" Item
+Fakemon --> "0..1" ItemStats : battleStats
 Team o--> "6 au plus" Fakemon
 Move --> "1" Type
 Move --> "1" MoveCategory
 
 legend bottom left
-  <b>Decorator (Item)</b> : comme Shield et FireSword au jour 08. L'objet enveloppe des stats et modifie seulement celles qu'il améliore de 20 %. Fakemon.getStats() renvoie alors l'objet.
-  <b>Talent</b> : la fiche conserve un identifiant ; les effets sont prévus dans #24.
-  <b>Fakemon</b> : une exception si moves ne contient pas 4 attaques. getStats() renvoie les stats de l'espèce jusqu'à l'issue 24. currentHp reste entre 0 et getMaxHp().
+  <b>Decorator (ItemStats)</b> : chaque objet crée une vue des stats de base et applique son bonus de 20 %.
+  <b>Talent</b> : la fiche conserve un identifiant. Les classes Ability appliquent les effets en combat.
+  <b>Fakemon</b> : une exception si moves ne contient pas 4 attaques. getStats() renvoie les stats avec les bonus si un objet est équipé. currentHp reste entre 0 et getMaxHp().
   <b>Team</b> : une exception au-delà de 6 fakemons.
   <b>Stats</b> : des double, car le GDD n'arrondit les dégâts qu'à la fin. Les objets ne changent jamais les PV : getHp() reste un int.
 endlegend
