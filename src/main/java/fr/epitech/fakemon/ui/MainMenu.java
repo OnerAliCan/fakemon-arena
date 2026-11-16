@@ -1,7 +1,8 @@
 package fr.epitech.fakemon.ui;
 
 import fr.epitech.fakemon.App;
-import fr.epitech.fakemon.data.BundledRoster;
+import fr.epitech.fakemon.data.JsonSpeciesRepository;
+import fr.epitech.fakemon.data.SpeciesFactory;
 import java.util.function.Consumer;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -49,13 +50,16 @@ public class MainMenu extends VBox {
         combatButton.setOnAction(event -> {
             VBox modes = new VBox(12);
             modes.setAlignment(Pos.CENTER);
-            modes.getChildren().addAll(new Label("Combat contre l’IA"),
-                    ConstructedBattleScreen.button("Combat construit", () -> sceneManager.show(
-                            new TeamSelectionScreen(BundledRoster.load(), sceneManager,
-                                    () -> sceneManager.show(modes), () -> sceneManager.show(this)))),
-                    ConstructedBattleScreen.button("Combat aléatoire",
-                            () -> sceneManager.show(new TeamPreviewScreen(sceneManager, this))),
-                    ConstructedBattleScreen.button("Retour au menu principal", () -> sceneManager.show(this)));
+            Runnable menu = () -> sceneManager.show(this);
+            var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
+            Button constructed = new Button("Combat construit");
+            constructed.setOnAction(click -> sceneManager.show(new TeamSelectionScreen(
+                    roster, sceneManager, () -> sceneManager.show(modes), menu)));
+            Button random = new Button("Combat aléatoire");
+            random.setOnAction(click -> sceneManager.show(new TeamPreviewScreen(sceneManager, roster, menu)));
+            Button back = new Button("Retour au menu principal");
+            back.setOnAction(click -> menu.run());
+            modes.getChildren().addAll(new Label("Combat contre l’IA"), constructed, random, back);
             sceneManager.show(modes);
         });
 

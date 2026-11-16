@@ -1,42 +1,41 @@
 package fr.epitech.fakemon.ui;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
 
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Species;
-import java.util.Objects;
+import fr.epitech.fakemon.core.api.SpeciesRepository;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
-/** Aperçu de deux équipes de démonstration de six fakemon avant le combat. */
+/** Aperçu de deux équipes de six fakemon avant le combat. */
 public class TeamPreviewScreen extends BorderPane {
     /**
      * Construit l'aperçu et les actions de navigation.
      * @param sceneManager gestionnaire des changements d'écran
-     * @param mainMenu menu existant à retrouver au retour
+     * @param roster catalogue des espèces utilisées pour le tirage
+     * @param menu action de retour au menu
      */
-    public TeamPreviewScreen(SceneManager sceneManager, MainMenu mainMenu) {
+    public TeamPreviewScreen(SceneManager sceneManager, SpeciesRepository roster, Runnable menu) {
         setPadding(new Insets(16));
-        Label title = new Label("Aperçu des équipes — démonstration 6 contre 6");
+        Label title = new Label("Aperçu des équipes — 6 contre 6");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         setTop(title);
         BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
 
-        BattleDemo demo = new BattleDemo(new Random());
-        VBox playerTeamPanel = createTeamPanel("Mon équipe", demo.playerTeam);
-        VBox opponentTeamPanel = createTeamPanel("Équipe adverse", demo.opponentTeam);
+        BattleSetup setup = BattleSetup.random(roster, new Random());
+        VBox playerTeamPanel = createTeamPanel("Mon équipe", setup.player.getFakemons());
+        VBox opponentTeamPanel = createTeamPanel("Équipe adverse", setup.opponent.getFakemons());
         HBox teamsPanel = new HBox(32, playerTeamPanel, opponentTeamPanel);
         HBox.setHgrow(playerTeamPanel, Priority.ALWAYS);
         HBox.setHgrow(opponentTeamPanel, Priority.ALWAYS);
@@ -45,9 +44,9 @@ public class TeamPreviewScreen extends BorderPane {
         setCenter(teamsScroll);
 
         Button backButton = new Button("Retour au menu");
-        backButton.setOnAction(event -> sceneManager.show(mainMenu));
+        backButton.setOnAction(event -> menu.run());
         Button fightButton = new Button("Combattre");
-        fightButton.setOnAction(event -> sceneManager.show(new BattleScreen(sceneManager, mainMenu, demo)));
+        fightButton.setOnAction(event -> sceneManager.show(new BattleScreen(sceneManager, setup, menu)));
         HBox actions = new HBox(12, backButton, fightButton);
         actions.setAlignment(Pos.CENTER_RIGHT);
         BorderPane.setMargin(actions, new Insets(12, 0, 0, 0));
@@ -69,14 +68,7 @@ public class TeamPreviewScreen extends BorderPane {
     /** Regroupe le sprite de face, le nom français et les types d'un fakemon. */
     private HBox createMemberRow(Fakemon member) {
         Species species = member.getSpecies();
-        String spritePath = "/sprites/front/" + species.getOriginalName().toLowerCase(Locale.ROOT) + ".png";
-        Image spriteImage = new Image(Objects.requireNonNull(
-                getClass().getResourceAsStream(spritePath), "Sprite introuvable : " + spritePath));
-        ImageView spriteView = new ImageView(spriteImage);
-        spriteView.setFitWidth(48);
-        spriteView.setFitHeight(48);
-        spriteView.setPreserveRatio(true);
-        spriteView.setSmooth(false);
+        ImageView spriteView = BattleAssets.sprite(species, false, 48);
         Label frenchName = new Label(species.getFrenchName());
         frenchName.setStyle("-fx-font-weight: bold;");
         VBox memberInfo = new VBox(4, frenchName, new Label("Types : " + species.getTypes()));

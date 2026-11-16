@@ -1,27 +1,29 @@
 package fr.epitech.fakemon.ui;
 
-import java.util.Random;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.List;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
-import fr.epitech.fakemon.core.api.BattleEvent;
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
-import fr.epitech.fakemon.core.api.Forfeit;
+import fr.epitech.fakemon.core.api.BattleEngine;
+import fr.epitech.fakemon.core.api.BattleEvent;
 import fr.epitech.fakemon.core.api.BattleListener;
+import fr.epitech.fakemon.core.api.CriticalHitEvent;
+import fr.epitech.fakemon.core.api.EffectivenessEvent;
 import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
 import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
+import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.HpLostEvent;
+import fr.epitech.fakemon.core.api.HpRestoredEvent;
+import fr.epitech.fakemon.core.api.MoveMissedEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
-import fr.epitech.fakemon.core.api.SelectionReason;
+import fr.epitech.fakemon.core.api.PlayerAction;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
+import fr.epitech.fakemon.core.api.UseMove;
+import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
 import fr.epitech.fakemon.core.model.Fakemon;
-import fr.epitech.fakemon.core.model.Move;
-import fr.epitech.fakemon.core.model.Type;
-import fr.epitech.fakemon.core.model.Team;
-
+import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -30,8 +32,6 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -39,248 +39,215 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 
-/** Écran de démonstration : affiche les événements du contrat sans moteur de combat. */
-public class BattleScreen extends BorderPane implements BattleListener {
-    private final TextArea battleLog = new TextArea();
-    private final ProgressBar playerHpBar = new ProgressBar();
-    private final ProgressBar opponentHpBar = new ProgressBar();
-    private final Label playerHpLabel = new Label();
-    private final Label opponentHpLabel = new Label();
-    private final BattleDemo demo;
-    private int turnNumber;
-    private boolean ended;
+/** Affiche les événements de l'arbitre et transmet les choix du joueur. */
+public final class BattleScreen extends BorderPane implements BattleListener {
+    private enum View { ACTION, TEAM, REQUIRED, PAUSE, RESOLVING, FINISHED }
+
+    private final BattleEngine engine = new DefaultBattleEngine();
+    private final BattleSetup setup;
+    private final SceneManager scenes;
+    private final Runnable menu;
+    private final Deque<Runnable> events = new ArrayDeque<>();
+    private final PauseTransition eventDelay = new PauseTransition(Duration.millis(110));
     private final StackPane arena = new StackPane();
-    private final Button backButton = new Button("Retour au menu");
+    private final GridPane attacks = new GridPane();
+    private final TextArea battleLog = new TextArea();
+    private final Button pauseButton = new Button("Pause");
     private final Button teamButton = new Button("Équipe");
-    private final Button[] attackButtons;
+    private final Label turnLabel = new Label();
     private final HBox controls;
-    private VBox playerPanel;
-    private final SceneManager sceneManager;
-    private final MainMenu mainMenu;
-    private boolean paused;
-    private boolean resolving;
+    private final FighterPanel player = new FighterPanel(true);
+    private final FighterPanel opponent = new FighterPanel(false);
+    private View view = View.RESOLVING;
+    private int turnsPlayed;
 
-    /**
-     * Construit l'écran de combat sur des données factices.
-     * @param sceneManager gestionnaire de navigation
-     * @param mainMenu menu à retrouver au retour
-     */
-    public BattleScreen(SceneManager sceneManager, MainMenu mainMenu) {
-        this(sceneManager, mainMenu, new BattleDemo(new Random()));
-    }
-
-    BattleScreen(SceneManager sceneManager, MainMenu mainMenu, BattleDemo demo) {
-        this.demo = demo;
-        this.attackButtons = new Button[demo.moves.size()];
-        this.sceneManager = sceneManager;
-        this.mainMenu = mainMenu;
+    BattleScreen(SceneManager scenes, BattleSetup setup, Runnable menu) {
+        this.setup = setup;
+        this.scenes = scenes;
+        this.menu = menu;
+        setPadding(new Insets(12));
         setFocusTraversable(true);
+        pauseButton.setOnAction(event -> pause());
+        teamButton.setOnAction(event -> showTeam(false));
+        setTop(new HBox(16, pauseButton, teamButton, turnLabel));
+        StackPane.setAlignment(player, Pos.BOTTOM_LEFT);
+        StackPane.setAlignment(opponent, Pos.TOP_RIGHT);
+        arena.getChildren().addAll(player, opponent);
+        arena.setPadding(new Insets(12));
+        attacks.setHgap(8);
+        attacks.setVgap(8);
+        battleLog.setEditable(false);
+        battleLog.setWrapText(true);
+        battleLog.setPrefSize(340, 125);
+        battleLog.setMinWidth(0);
+        controls = new HBox(12, attacks, battleLog);
+        HBox.setHgrow(battleLog, Priority.ALWAYS);
+        showArena();
+        setView(View.RESOLVING);
         addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 event.consume();
-                if (paused) {
-                    resumeBattle();
-                } else if (getCenter() == arena && !resolving && demo.canAct()) {
-                    pauseBattle();
+                if (view == View.PAUSE || view == View.TEAM) {
+                    ready();
+                } else if (view == View.ACTION) {
+                    pause();
                 }
             }
         });
+        eventDelay.setOnFinished(event -> renderNext());
         sceneProperty().addListener((property, previous, current) -> {
-            if (current != null) {
-                javafx.application.Platform.runLater(() -> {
-                    if (getScene() == current) {
-                        requestFocus();
-                    }
-                });
+            if (current == null) {
+                eventDelay.stop();
+                events.clear();
+            } else {
+                requestFocus();
             }
         });
-        setPadding(new Insets(12));
-        backButton.setText("Pause");
-        backButton.setOnAction(event -> {
-            if (getCenter() == arena && !resolving && demo.canAct()) {
-                pauseBattle();
-            }
-        });
-        teamButton.setOnAction(event -> showTeamPanel(false));
-        HBox header = new HBox(20, backButton, teamButton, new Label("Combat de démonstration — données factices"));
-        header.setAlignment(Pos.CENTER_LEFT);
-        setTop(header);
+        engine.addListener(this);
+        setup.start(engine);
+        renderNext();
+    }
 
-        // Les panneaux partagent la hauteur disponible au lieu de s'empiler.
-        VBox opponentPanel = createFakemonPanel(demo.opponent, "front/" + demo.opponent.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png",
-                opponentHpBar, opponentHpLabel, 96);
-        StackPane.setAlignment(opponentPanel, Pos.TOP_RIGHT);
-        arena.getChildren().add(opponentPanel);
-        showActivePlayer(demo.activePlayer());
-        arena.setPadding(new Insets(12));
-        setCenter(arena);
-
-        GridPane attacksPanel = new GridPane();
-        attacksPanel.setHgap(8);
-        attacksPanel.setVgap(8);
-        for (int index = 0; index < demo.moves.size(); index++) {
-            final int moveIndex = index;
-            Button button = new Button();
-            attackButtons[index] = button;
-            updateAttackButton(button, index);
-            button.setPrefWidth(250);
-            button.setMinHeight(68);
-            button.setWrapText(true);
-            button.setStyle("-fx-font-size: 11px; -fx-base: " + typeColor(demo.moves.get(index).getType()) + ";");
-            button.setOnAction(event -> {
-                showEvents(demo.play(moveIndex));
-            });
-            attacksPanel.add(button, index % 2, index / 2);
+    private void submit(PlayerAction action) {
+        if (view == View.RESOLVING || view == View.FINISHED) {
+            return;
         }
-
-        battleLog.setEditable(false);
-        battleLog.setWrapText(true);
-        battleLog.setPrefWidth(350);
-        battleLog.setMinWidth(0);
-        battleLog.setPrefHeight(120);
-        controls = new HBox(12, attacksPanel, battleLog);
-        HBox.setHgrow(battleLog, Priority.ALWAYS);
-        setBottom(controls);
-        updateHp(Side.OPPONENT, demo.opponent.getCurrentHp(), demo.opponent.getMaxHp());
-        appendLog("Choisissez une attaque. La quatrième illustre une attaque sans PP.");
-    }
-
-    private void pauseBattle() {
-        paused = true;
-        BattlePausePanel pause = new BattlePausePanel(this::resumeBattle, sceneManager::showVolumeSettings,
-                () -> showEvents(demo.submitAction(new Forfeit())));
-        setCenter(pause);
-        setBottom(null);
-        backButton.setDisable(true);
-        teamButton.setDisable(true);
-        pause.focusResume();
-    }
-
-    private void resumeBattle() {
-        paused = false;
-        closeTeamPanel();
-        requestFocus();
-    }
-
-    private void showTeamPanel(boolean required) {
-        TeamPanel panel = new TeamPanel(demo.playerTeam, demo.activePlayer(), required, action -> {
-            List<BattleEvent> events = demo.send(action);
-            if (!events.isEmpty()) {
-                closeTeamPanel();
-                showEvents(events);
-            }
-        }, this::closeTeamPanel);
-        setCenter(new StackPane(panel));
-        setBottom(null);
-        teamButton.setDisable(true);
-        backButton.setDisable(true);
-    }
-
-    private void closeTeamPanel() {
-        setCenter(arena);
-        setBottom(controls);
-        backButton.setDisable(false);
-        updateControls();
-    }
-
-    private void showEvents(List<BattleEvent> events) {
-        resolving = true;
-        try {
-            for (BattleEvent event : events) {
-                onEvent(event);
-            }
-        } finally {
-            resolving = false;
-            updateControls();
+        if (view == View.ACTION || view == View.TEAM) {
+            turnsPlayed = engine.getState().getTurnNumber();
         }
+        showArena();
+        setView(View.RESOLVING);
+        engine.submitAction(action);
+        renderNext();
     }
 
-    private void updateControls() {
-        for (int index = 0; index < attackButtons.length; index++) {
-            updateAttackButton(attackButtons[index], index);
+    private void renderNext() {
+        if (events.isEmpty()) {
+            if (view == View.RESOLVING) {
+                ready();
+            }
+            return;
         }
-        backButton.setDisable(getCenter() != arena || !demo.canAct());
-        teamButton.setDisable(getCenter() != arena || !demo.canAct()
-                || demo.playerTeam.stream().noneMatch(demo::canSelect));
-    }
-
-    private void showActivePlayer(Fakemon active) {
-        arena.getChildren().remove(playerPanel);
-        String path = "back/" + active.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png";
-        playerPanel = createFakemonPanel(active, path, playerHpBar, playerHpLabel, 112);
-        StackPane.setAlignment(playerPanel, Pos.BOTTOM_LEFT);
-        arena.getChildren().add(playerPanel);
-        updateHp(Side.PLAYER, active.getCurrentHp(), active.getMaxHp());
-    }
-
-    private VBox createFakemonPanel(Fakemon fakemon, String spritePath,
-            ProgressBar bar, Label hpLabel, int spriteSize) {
-        Image image = new Image(Objects.requireNonNull(
-                getClass().getResourceAsStream("/sprites/" + spritePath), "Sprite introuvable : " + spritePath));
-        ImageView sprite = new ImageView(image);
-        sprite.setFitWidth(spriteSize);
-        sprite.setPreserveRatio(true);
-        sprite.setSmooth(false);
-        bar.setMinSize(200, 18);
-        bar.setPrefSize(200, 18);
-        bar.setMaxSize(200, 18);
-        Label name = new Label(fakemon.getSpecies().getFrenchName());
-        name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
-        VBox panel = new VBox(4, name, new Label("Type : " + fakemon.getSpecies().getTypes()), hpLabel, bar, sprite);
-        panel.setMaxSize(240, Region.USE_PREF_SIZE);
-        return panel;
-    }
-
-    private void updateAttackButton(Button button, int index) {
-        Move move = demo.moves.get(index);
-        button.setText(move.getName() + " — " + move.getType() + " — PP " + demo.remainingPp(index) + "/4"
-                + "\n" + move.getCategory() + " • Puissance " + move.getPower()
-                + " • Précision " + move.getAccuracy() + "%" + (move.getPriority() > 0 ? " • rapide" : ""));
-        button.setDisable(!demo.canAct() || demo.remainingPp(index) == 0);
-    }
-
-    private void updateHp(Side side, int hp, int maxHp) {
-        int displayedHp = Math.max(0, Math.min(hp, maxHp));
-        double ratio = (double) displayedHp / maxHp;
-        ProgressBar bar = side == Side.PLAYER ? playerHpBar : opponentHpBar;
-        Label label = side == Side.PLAYER ? playerHpLabel : opponentHpLabel;
-        bar.setProgress(ratio);
-        bar.setStyle("-fx-accent: " + (ratio < 0.2 ? "#d93636" : ratio < 0.5 ? "#e59522" : "#299b52") + ";");
-        label.setText("PV : " + displayedHp + " / " + maxHp);
+        events.removeFirst().run();
+        if (!events.isEmpty()) {
+            eventDelay.playFromStart();
+        } else if (view == View.RESOLVING) {
+            ready();
+        }
     }
 
     /**
-     * Affiche un événement reçu dans l'ordre sur le thread JavaFX.
-     * Cette entrée pourra être abonnée au moteur lors de l'issue #26.
-     * @param event événement à afficher
+     * Capture les valeurs au moment de l'événement et les affiche dans l'ordre.
+     * @param event fait annoncé par l'arbitre sur le thread JavaFX
      */
     @Override
     public void onEvent(BattleEvent event) {
-        if (ended) { return; }
-        if (event instanceof BattleEndedEvent) {
-            ended = true;
-            BattleEndedEvent result = (BattleEndedEvent) event;
-            sceneManager.showBattleResult(result.getWinner(), result.getReason(), turnNumber, new Team(demo.playerTeam), mainMenu);
-        } else if (event instanceof TurnStartedEvent) {
-            turnNumber = ((TurnStartedEvent) event).getTurnNumber();
-            appendLog("Tour " + ((TurnStartedEvent) event).getTurnNumber());
-        } else if (event instanceof MoveUsedEvent) {
-            MoveUsedEvent move = (MoveUsedEvent) event;
-            appendLog(move.getFakemon().getSpecies().getFrenchName() + " utilise " + move.getMove().getName() + " !");
-        } else if (event instanceof HpLostEvent) {
-            HpLostEvent damage = (HpLostEvent) event;
-            updateHp(damage.getSide(), damage.getRemainingHp(), damage.getFakemon().getMaxHp());
-            appendLog(damage.getFakemon().getSpecies().getFrenchName() + " perd " + damage.getHpLost() + " PV.");
-        } else if (event instanceof FakemonFaintedEvent fainted) {
-            appendLog(fainted.getFakemon().getSpecies().getFrenchName() + " est K.O.");
-        } else if (event instanceof FakemonSelectionRequiredEvent selection
-                && selection.getReason() == SelectionReason.REPLACEMENT) {
-            showTeamPanel(true);
-        } else if (event instanceof FakemonEnteredEvent entered && entered.getSide() == Side.PLAYER) {
-            showActivePlayer(entered.getFakemon());
-            appendLog(entered.getFakemon().getSpecies().getFrenchName() + " entre en jeu.");
+        if (event instanceof FakemonEnteredEvent entered) {
+            Fakemon mon = entered.getFakemon();
+            int hp = mon.getCurrentHp();
+            events.add(() -> {
+                panel(entered.getSide()).show(mon, hp, setup.item(mon));
+                appendLog(name(mon) + " entre en jeu.");
+            });
+        } else {
+            events.add(() -> render(event));
         }
+    }
+
+    private void render(BattleEvent event) {
+        if (event instanceof TurnStartedEvent turn) {
+            turnLabel.setText("Tour " + turn.getTurnNumber());
+            appendLog("Tour " + turn.getTurnNumber());
+        } else if (event instanceof MoveUsedEvent move) {
+            appendLog(name(move.getFakemon()) + " utilise " + move.getMove().getName() + " !");
+        } else if (event instanceof HpLostEvent loss) {
+            panel(loss.getSide()).health(loss.getRemainingHp(), loss.getFakemon().getMaxHp());
+            appendLog(name(loss.getFakemon()) + " perd " + loss.getHpLost() + " PV.");
+        } else if (event instanceof HpRestoredEvent gain) {
+            panel(gain.getSide()).health(gain.getRemainingHp(), gain.getFakemon().getMaxHp());
+            appendLog(name(gain.getFakemon()) + " récupère " + gain.getHpRestored() + " PV.");
+        } else if (event instanceof MoveMissedEvent miss) {
+            appendLog(name(miss.getFakemon()) + " rate son attaque.");
+        } else if (event instanceof CriticalHitEvent) {
+            appendLog("Coup critique !");
+        } else if (event instanceof EffectivenessEvent effectiveness) {
+            appendLog(switch (effectiveness.getEffectiveness()) {
+                case SUPER_EFFECTIVE -> "C'est super efficace !";
+                case NOT_VERY_EFFECTIVE -> "Ce n'est pas très efficace.";
+                case NO_EFFECT -> "L'attaque n'a aucun effet.";
+            });
+        } else if (event instanceof FakemonFaintedEvent fainted) {
+            appendLog(name(fainted.getFakemon()) + " est K.O.");
+        } else if (event instanceof FakemonSelectionRequiredEvent) {
+            showTeam(true);
+        } else if (event instanceof BattleEndedEvent result) {
+            setView(View.FINISHED);
+            scenes.show(new BattleEndScreen(result.getWinner(), result.getReason(), turnsPlayed, setup.player,
+                    () -> scenes.show(new BattleScreen(scenes, setup.rematch(), menu)), menu));
+        }
+    }
+
+    private void ready() {
+        showArena();
+        attacks.getChildren().clear();
+        var moves = engine.getState().getActiveFakemon(Side.PLAYER).getMoves();
+        for (int index = 0; index < moves.size(); index++) {
+            var move = moves.get(index);
+            Button button = new Button(move.getName() + " — " + move.getType()
+                    + "\nPuissance " + move.getPower() + " · Précision " + move.getAccuracy() + "%");
+            button.setPrefWidth(235);
+            button.setMinHeight(48);
+            button.setWrapText(true);
+            button.setOnAction(event -> submit(new UseMove(move)));
+            attacks.add(button, index % 2, index / 2);
+        }
+        setView(View.ACTION);
+        requestFocus();
+    }
+
+    private void showArena() {
+        setCenter(arena);
+        setBottom(controls);
+    }
+
+    private void showTeam(boolean required) {
+        if (!required && view != View.ACTION) {
+            return;
+        }
+        var state = engine.getState();
+        setView(required ? View.REQUIRED : View.TEAM);
+        setCenter(new StackPane(new TeamPanel(setup.player.getFakemons(), state.getActiveFakemon(Side.PLAYER),
+                required, this::submit, this::ready)));
+        setBottom(null);
+        requestFocus();
+    }
+
+    private void pause() {
+        if (view != View.ACTION) {
+            return;
+        }
+        setView(View.PAUSE);
+        var panel = new BattlePausePanel(this::ready, scenes::showVolumeSettings, () -> submit(new Forfeit()));
+        setCenter(panel);
+        setBottom(null);
+        panel.focusResume();
+    }
+
+    private void setView(View next) {
+        view = next;
+        attacks.setDisable(next != View.ACTION);
+        pauseButton.setDisable(next != View.ACTION);
+        teamButton.setDisable(next != View.ACTION || setup.player.getStandingFakemons().size() < 2);
+    }
+
+    private FighterPanel panel(Side side) {
+        return side == Side.PLAYER ? player : opponent;
+    }
+
+    private static String name(Fakemon mon) {
+        return mon.getSpecies().getFrenchName();
     }
 
     private void appendLog(String message) {
@@ -289,12 +256,32 @@ public class BattleScreen extends BorderPane implements BattleListener {
         battleLog.setScrollTop(Double.MAX_VALUE);
     }
 
-    private String typeColor(Type type) {
-        switch (type) {
-            case WATER: return "#91c7eb";
-            case SHADOW: return "#c2addb";
-            case FORCE: return "#ebba91";
-            default: return "#e3d694";
+    private static final class FighterPanel extends VBox {
+        private final boolean back;
+        private final ProgressBar bar = new ProgressBar();
+        private final Label hp = new Label();
+
+        FighterPanel(boolean back) {
+            super(4);
+            this.back = back;
+            setMaxSize(240, Region.USE_PREF_SIZE);
+            bar.setPrefSize(200, 18);
+            bar.setMinHeight(18);
+        }
+
+        void show(Fakemon mon, int currentHp, String item) {
+            Label name = new Label(BattleScreen.name(mon));
+            name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
+            getChildren().setAll(name, new Label("Types : " + mon.getSpecies().getTypes()),
+                    new Label("Objet : " + item), bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104));
+            health(currentHp, mon.getMaxHp());
+        }
+
+        void health(int current, int max) {
+            double ratio = (double) current / max;
+            bar.setProgress(ratio);
+            bar.setStyle("-fx-accent: " + (ratio < .2 ? "#d93636" : ratio < .5 ? "#e59522" : "#299b52") + ";");
+            hp.setText("PV : " + current + " / " + max);
         }
     }
 }

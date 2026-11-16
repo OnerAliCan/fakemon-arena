@@ -1,8 +1,6 @@
 package fr.epitech.fakemon.ui;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 import fr.epitech.fakemon.core.api.SendFakemon;
@@ -13,7 +11,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.effect.ColorAdjust;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -48,13 +45,7 @@ final class TeamPanel extends VBox {
 
     private HBox createRow(Fakemon member, boolean active, Consumer<SendFakemon> onSelect) {
         boolean fainted = member.isFainted();
-        String spritePath = "/sprites/front/" + member.getSpecies().getOriginalName().toLowerCase(Locale.ROOT) + ".png";
-        ImageView sprite = new ImageView(new Image(Objects.requireNonNull(
-                getClass().getResourceAsStream(spritePath), "Sprite introuvable : " + spritePath)));
-        sprite.setFitWidth(42);
-        sprite.setFitHeight(42);
-        sprite.setPreserveRatio(true);
-        sprite.setSmooth(false);
+        ImageView sprite = BattleAssets.sprite(member.getSpecies(), false, 42);
         if (fainted || active) {
             ColorAdjust gray = new ColorAdjust();
             gray.setSaturation(-1);
