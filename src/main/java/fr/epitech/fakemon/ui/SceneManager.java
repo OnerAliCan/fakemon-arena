@@ -12,6 +12,12 @@ import javafx.scene.Scene;
 public final class SceneManager {
 
     private final Scene scene;
+    private final VolumeSettings volumeSettings = new VolumeSettings();
+
+    /** Ouvre les réglages audio de la session. */
+    public void showVolumeSettings() {
+        volumeSettings.show(scene.getWindow());
+    }
 
     /**
      * Crée le gestionnaire pour la scène du jeu.

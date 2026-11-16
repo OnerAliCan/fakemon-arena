@@ -29,9 +29,11 @@ final class TeamPanel extends VBox {
         setMaxSize(660, Region.USE_PREF_SIZE);
         setStyle("-fx-background-color: #262b45; -fx-background-radius: 12;"
                 + "-fx-border-color: #3a4170; -fx-border-radius: 12;");
-        Label title = lightLabel(required ? "Choisis un remplaçant" : "Mon équipe");
+        Label title = lightLabel(active == null ? "Choisis ton premier fakemon"
+                : required ? "Choisis un remplaçant" : "Mon équipe");
         title.setStyle("-fx-text-fill: #fff5dd; -fx-font-size: 21px; -fx-font-weight: bold;");
-        Label hint = lightLabel(required ? active.getSpecies().getFrenchName() + " est K.O. Envoie un autre fakemon."
+        Label hint = lightLabel(active == null ? "Envoie le fakemon qui commencera le combat."
+                : required ? active.getSpecies().getFrenchName() + " est K.O. Envoie un autre fakemon."
                 : "Envoyer un autre fakemon utilise ton tour.");
         getChildren().addAll(title, hint);
         for (Fakemon member : members) {

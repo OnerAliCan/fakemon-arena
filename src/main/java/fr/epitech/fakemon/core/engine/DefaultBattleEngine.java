@@ -19,6 +19,7 @@ import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
 import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
 import fr.epitech.fakemon.core.api.HpLostEvent;
+import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.MoveMissedEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
 import fr.epitech.fakemon.core.api.Opponent;
@@ -122,7 +123,10 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
      */
     @Override
     public void submitAction(PlayerAction playerAction) {
-        if (playerAction instanceof SendFakemon sendfakemon && phase == BattlePhase.WAITING_FIRST_FAKEMON) {
+        if (playerAction instanceof Forfeit && phase == BattlePhase.WAITING_ACTION) {
+            phase = BattlePhase.FINISHED;
+            notifyListeners(new BattleEndedEvent(Side.OPPONENT, BattleEndReason.FORFEIT));
+        } else if (playerAction instanceof SendFakemon sendfakemon && phase == BattlePhase.WAITING_FIRST_FAKEMON) {
             activePlayerFakemon = sendfakemon.getFakemon();
             activeOpponentFakemon = opponentTeam.getFakemons().get(0);
             turnNumber = 1;

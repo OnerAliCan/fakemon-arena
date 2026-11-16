@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
+import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.BattleEndReason;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
@@ -87,17 +88,17 @@ class BattleDemoTest {
         assertEquals(Side.PLAYER, result.getWinner());
         assertEquals(0, demo.opponent.getCurrentHp());
         assertTrue(demo.play(1).isEmpty());
-        assertTrue(demo.forfeit().isEmpty());
+        assertTrue(demo.submitAction(new Forfeit()).isEmpty());
     }
     @Test
     void forfeitProducesOneDefeatAndStopsTheScenario() {
         BattleDemo demo = new BattleDemo();
         demo.play(0);
-        BattleEndedEvent result = (BattleEndedEvent) demo.forfeit().get(0);
+        BattleEndedEvent result = (BattleEndedEvent) demo.submitAction(new Forfeit()).get(0);
         assertEquals(Side.OPPONENT, result.getWinner());
         assertEquals(BattleEndReason.FORFEIT, result.getReason());
         assertEquals(1, demo.getTurn());
-        assertTrue(demo.forfeit().isEmpty());
+        assertTrue(demo.submitAction(new Forfeit()).isEmpty());
         assertTrue(demo.play(0).isEmpty());
     }
 

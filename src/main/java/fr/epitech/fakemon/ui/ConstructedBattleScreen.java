@@ -1,5 +1,10 @@
 package fr.epitech.fakemon.ui;
 
+import fr.epitech.fakemon.core.api.BattleEndReason;
+import fr.epitech.fakemon.core.api.BattleEndedEvent;
+import fr.epitech.fakemon.core.api.Forfeit;
+import fr.epitech.fakemon.core.api.Side;
+import fr.epitech.fakemon.core.model.Team;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Species;
 import java.util.Locale;
@@ -12,7 +17,10 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -22,6 +30,8 @@ final class ConstructedBattleScreen extends BorderPane {
     private final ConstructedMatch match;
     private final Runnable menu;
     private final SceneManager scenes;
+    private enum View { TEAM, ACTION, PAUSE }
+    private View view;
     private final TextArea journal = new TextArea();
 
     ConstructedBattleScreen(ConstructedMatch match, SceneManager scenes, Runnable menu) {
@@ -32,42 +42,59 @@ final class ConstructedBattleScreen extends BorderPane {
         journal.setEditable(false);
         journal.setWrapText(true);
         journal.setPrefRowCount(4);
+        setFocusTraversable(true);
+        addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
+                event.consume();
+                if (view == View.ACTION) {
+                    pause();
+                } else if (view == View.PAUSE) {
+                    showBattle();
+                }
+            }
+        });
         showTeam(true);
     }
 
     private void showTeam(boolean required) {
-        String title = match.active == null ? "Choisis ton premier fakemon"
-                : required ? "Choisis un remplaçant" : "Mon équipe";
-        VBox rows = new VBox(6, heading(title));
-        for (Fakemon member : match.playerTeam) {
-            var name = member.getSpecies().getFrenchName();
-            var send = button(member.isFainted() ? "K.O." : member == match.active ? "En jeu" : "Envoyer", () -> {
-                if (match.choose(member)) {
-                    journal.appendText(name + " entre en jeu.\n");
-                    showBattle();
-                }
-            });
-            send.setDisable(member.isFainted() || member == match.active);
-            send.setAccessibleText("Envoyer " + name);
-            var row = new HBox(12, sprite(member.getSpecies(), "front", 40), new Label(name),
-                    new Label("PV : " + member.getCurrentHp() + " / " + member.getMaxHp()), send);
-            row.setAlignment(Pos.CENTER_LEFT);
-            rows.getChildren().add(row);
-        }
+        view = View.TEAM;
+        TeamPanel panel = new TeamPanel(match.playerTeam, match.active, required, action -> {
+            var member = action.getFakemon();
+            if (match.choose(member)) {
+                journal.appendText(member.getSpecies().getFrenchName() + " entre en jeu.\n");
+                showBattle();
+            }
+        }, this::showBattle);
         setTop(null);
-        setCenter(rows);
-        setBottom(required ? null : button("Retour au combat", this::showBattle));
+        setCenter(new StackPane(panel));
+        setBottom(null);
+        requestFocus();
+    }
+
+    private void pause() {
+        if (view != View.ACTION) {
+            return;
+        }
+        view = View.PAUSE;
+        BattlePausePanel panel = new BattlePausePanel(this::showBattle, scenes::showVolumeSettings,
+                () -> showResult(match.submitAction(new Forfeit())));
+        setTop(null);
+        setCenter(panel);
+        setBottom(null);
+        panel.focusResume();
     }
 
     private void showBattle() {
         var opponent = match.opponent();
         if (opponent == null || match.playerTeam.stream().allMatch(Fakemon::isFainted)) {
-            showResult(opponent == null);
+            showResult(new BattleEndedEvent(opponent == null ? Side.PLAYER : Side.OPPONENT,
+                    BattleEndReason.ALL_FAINTED));
         } else if (match.active.isFainted()) {
             showTeam(true);
         } else {
+            view = View.ACTION;
             setTop(new HBox(12, heading("Combat construit"),
-                    button("Équipe", () -> showTeam(false)), button("Abandonner", () -> showResult(false))));
+                    button("Équipe", () -> showTeam(false)), button("Pause", this::pause)));
             var playerCard = combatant(match.active, match.playerLoadouts.get(match.playerTeam.indexOf(match.active)).item(), "back");
             var opponentCard = combatant(opponent, match.opponentLoadouts.get(match.opponentTeam.indexOf(opponent)).item(), "front");
             var arena = new HBox(100, playerCard, opponentCard);
@@ -81,6 +108,7 @@ final class ConstructedBattleScreen extends BorderPane {
                 }));
             }
             setBottom(new VBox(8, moves, journal));
+            requestFocus();
         }
     }
 
@@ -93,15 +121,10 @@ final class ConstructedBattleScreen extends BorderPane {
         return card;
     }
 
-    private void showResult(boolean victory) {
-        var content = new VBox(16, heading(victory ? "Victoire !" : "Défaite"),
-                new Label("Nombre de tours : " + match.turn),
-                button("Revanche", () -> scenes.show(new ConstructedBattleScreen(match.rematch(), scenes, menu))),
-                button("Menu", menu));
-        content.setAlignment(Pos.CENTER);
-        setTop(null);
-        setBottom(null);
-        setCenter(content);
+    private void showResult(BattleEndedEvent result) {
+        scenes.show(new BattleEndScreen(result.getWinner(), result.getReason(), match.turn,
+                new Team(match.playerTeam),
+                () -> scenes.show(new ConstructedBattleScreen(match.rematch(), scenes, menu)), menu));
     }
 
     static ImageView sprite(Species species, String direction, int size) {

@@ -71,17 +71,7 @@ public class MainMenu extends VBox {
             sceneManager.show(this);
         });
 
-        VBox optionsMenu = new VBox(15);
-        optionsMenu.setAlignment(Pos.CENTER);
-        Button optionsBackButton = new Button("Retour");
-        optionsMenu.getChildren().addAll(new Label("Options"), optionsBackButton);
-
-        optionsButton.setOnAction(event -> {
-            sceneManager.show(optionsMenu);
-        });
-        optionsBackButton.setOnAction(event -> {
-            sceneManager.show(this);
-        });
+        optionsButton.setOnAction(event -> sceneManager.showVolumeSettings());
 
         creditsButton.setOnAction(event -> {
             CreditsScreen credits = new CreditsScreen(() -> sceneManager.show(this), openLink);

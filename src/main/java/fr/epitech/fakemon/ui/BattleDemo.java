@@ -3,6 +3,7 @@ package fr.epitech.fakemon.ui;
 import fr.epitech.fakemon.core.api.BattleEndReason;
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
 import fr.epitech.fakemon.core.api.BattleEvent;
+import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
 import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
@@ -161,8 +162,8 @@ final class BattleDemo {
         return events;
     }
 
-    List<BattleEvent> forfeit() {
-        if (ended) {
+    List<BattleEvent> submitAction(Forfeit action) {
+        if (!canAct()) {
             return List.of();
         }
         ended = true;
@@ -192,6 +193,7 @@ final class BattleDemo {
         events.add(new HpLostEvent(side, fakemon, lostHp, fakemon.getCurrentHp()));
         if (fakemon.isFainted()) {
             events.add(new FakemonFaintedEvent(side, fakemon));
+
         }
     }
 }
