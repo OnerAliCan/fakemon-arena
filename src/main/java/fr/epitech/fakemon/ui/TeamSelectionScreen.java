@@ -31,7 +31,8 @@ final class TeamSelectionScreen extends BorderPane {
     TeamSelectionScreen(SpeciesRepository roster, SceneManager scenes, Runnable back, Runnable menu) {
         setPadding(new Insets(16));
         setStyle("-fx-background-color: #19233a;");
-        Label title = ConstructedBattleScreen.heading("Choisissez vos fakemon");
+        Label title = new Label("Choisissez vos fakemon");
+        title.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
         title.setStyle(title.getStyle() + "-fx-text-fill: #fff5dd;");
         Label help = new Label("Choisis six fakemon. Clique de nouveau sur une carte pour la retirer.");
         help.setStyle("-fx-text-fill: #d6dcf5;");
@@ -42,7 +43,7 @@ final class TeamSelectionScreen extends BorderPane {
         grid.setPadding(new Insets(6));
         grid.setStyle("-fx-background-color: #19233a;");
         for (Species species : roster.findAll()) {
-            var card = new ToggleButton(species.getFrenchName(), ConstructedBattleScreen.sprite(species, "front", 48));
+            var card = new ToggleButton(species.getFrenchName(), BattleAssets.sprite(species, false, 48));
             card.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
             card.setWrapText(true);
             card.setPrefSize(136, 96);
@@ -64,11 +65,13 @@ final class TeamSelectionScreen extends BorderPane {
         setCenter(scroll);
 
         confirm.setStyle("-fx-base: #f6c443; -fx-font-weight: bold;");
-        confirm.setOnAction(event -> scenes.show(new ConstructedBattleScreen(
-                ConstructedMatch.start(roster, List.copyOf(selected), new Random()), scenes, menu)));
+        confirm.setOnAction(event -> scenes.show(new BattleScreen(scenes,
+                BattleSetup.constructed(roster, List.copyOf(selected), new Random()), menu)));
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        var actions = new HBox(12, ConstructedBattleScreen.button("Retour", back), spacer, confirm);
+        Button backButton = new Button("Retour");
+        backButton.setOnAction(event -> back.run());
+        var actions = new HBox(12, backButton, spacer, confirm);
         actions.setAlignment(Pos.CENTER_LEFT);
         setBottom(actions);
         updateSelection();

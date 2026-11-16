@@ -1,23 +1,32 @@
 @startuml
 actor Joueur
 participant BattleScreen
-participant BattleDemo
+participant DefaultBattleEngine
+participant RandomOpponent
 participant SceneManager
 participant BattleEndScreen
-Joueur -> BattleScreen : attaque ou abandon
-BattleScreen -> BattleDemo : play(index) / forfeit()
-BattleDemo --> BattleScreen : liste de BattleEvent
-BattleScreen -> BattleScreen : onEvent(BattleEndedEvent)
-BattleScreen -> SceneManager : showBattleResult(vainqueur, raison, tours, équipe, menu)
-SceneManager -> BattleEndScreen : créer le bilan et ses actions
-SceneManager -> SceneManager : show(bilan)
-alt Revanche
-  Joueur -> BattleEndScreen : clic Revanche
-  BattleEndScreen -> SceneManager : startDemoBattle(menu)
-  SceneManager -> BattleScreen : créer un nouvel écran
-  BattleScreen -> BattleDemo : nouveau tirage via TeamDrafter
-else Menu
-  Joueur -> BattleEndScreen : clic Menu
-  BattleEndScreen -> SceneManager : show(menu existant)
+Joueur -> BattleScreen : attaque, changement ou abandon
+BattleScreen -> BattleScreen : verrouiller les commandes
+BattleScreen -> DefaultBattleEngine : submitAction(action)
+opt Tour normal
+    DefaultBattleEngine -> RandomOpponent : chooseAction(...)
+    RandomOpponent --> DefaultBattleEngine : action adverse
+end
+DefaultBattleEngine -> BattleScreen : onEvent(...) en ordre
+DefaultBattleEngine --> BattleScreen : retour
+BattleScreen -> BattleScreen : afficher les événements
+alt Fin de combat
+    BattleScreen -> SceneManager : show(BattleEndScreen)
+    alt Revanche
+        Joueur -> BattleEndScreen : clic Revanche
+        BattleEndScreen -> SceneManager : ouvrir un nouvel écran de combat
+    else Menu
+        Joueur -> BattleEndScreen : clic Menu
+        BattleEndScreen -> SceneManager : afficher le menu
+    end
+else Remplacement obligatoire
+    BattleScreen -> Joueur : demander un remplaçant valide
+else Tour suivant
+    BattleScreen -> BattleScreen : réactiver les commandes
 end
 @enduml
