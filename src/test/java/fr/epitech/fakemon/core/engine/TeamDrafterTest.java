@@ -11,6 +11,7 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Team;
 import fr.epitech.fakemon.core.model.Type;
 import java.util.ArrayList;
@@ -117,7 +118,16 @@ class TeamDrafterTest {
             possibleMoves.add(new Move(name + "-attaque" + i, Type.FIRE, MoveCategory.PHYSICAL, 40, 100, 0));
         }
         BaseStats stats = new BaseStats(100, 100, 100, 100, 100, 100);
-        return new Species(name, name, List.of(Type.FIRE), stats, possibleMoves);
+        return new Species.Builder()
+            .originalName(name)
+            .frenchName(name)
+            .types(List.of(Type.FIRE))
+            .stats(stats)
+            .possibleMoves(possibleMoves)
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/test.png")
+            .backSprite("/sprites/back/test.png")
+            .build();
     }
 
     /** Faux catalogue : le générateur n'utilise que findAll. */

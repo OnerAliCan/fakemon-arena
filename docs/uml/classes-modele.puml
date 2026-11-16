@@ -69,25 +69,27 @@ package "core.model" {
     - types : List<Type>
     - stats : Stats
     - possibleMoves : List<Move>
-    .. issue 24 ..
     - talent : Talent
-    .. issues 22 et 45 ..
-    - number : int
+    - dexNumber : int
+    - coverageType : Type
     - concept : String
     - designer : String
     - frontSprite : String
     - backSprite : String
     - cry : String
     --
-    + Species(...)
+    - Species(builder : Builder)
     + getters
+  }
+
+  class "Species.Builder" as SpeciesBuilder <<#22>> {
+    + build() : Species
   }
 
   class Fakemon <<#8>> {
     - species : Species
     - moves : List<Move>
     - currentHp : int
-    .. issue 24 ..
     - item : Item
     --
     + Fakemon(species, moves)
@@ -99,7 +101,6 @@ package "core.model" {
     + isFainted() : boolean
     + takeDamage(damageTaken : int) : void
     + heal(healedHp : int) : void
-    .. issue 24 ..
     + getItem() : Item
   }
 
@@ -121,17 +122,11 @@ package "core.model" {
     + les 6 méthodes de Stats, qui renvoient celles de wrappedStats
   }
 
-  abstract class Talent <<#24>> {
-    - name : String
-    - description : String
-    --
-    # Talent(name, description)
-    + getName() : String
-    + getDescription() : String
-    + entryDamage(target : Fakemon) : int
-    + damageDealtMultiplier(self : Fakemon) : double
-    + damageReceivedMultiplier(effectiveness : double) : double
-    + endOfTurnHeal(self : Fakemon) : int
+  enum Talent <<#22>> {
+    CARAPACE
+    DERNIER_SOUFFLE
+    FRACAS
+    RECUPERATION
   }
 }
 
@@ -176,14 +171,11 @@ Gauntlet --|> Item
 Shield --|> Item
 Feather --|> Item
 
-Talent <|-- Smash
-Talent <|-- Armor
-Talent <|-- LastBreath
-Talent <|-- Recovery
 
+SpeciesBuilder ..> Species : construit
 Species --> "1" Stats
 Species --> "1..2" Type
-Species --> "6" Move : possibleMoves
+Species --> "4..*" Move : possibleMoves
 Species --> "1" Talent
 Fakemon --> "1" Species
 Fakemon --> "4" Move : moves
@@ -194,7 +186,7 @@ Move --> "1" MoveCategory
 
 legend bottom left
   <b>Decorator (Item)</b> : comme Shield et FireSword au jour 08. L'objet enveloppe des stats et modifie seulement celles qu'il améliore de 20 %. Fakemon.getStats() renvoie alors l'objet.
-  <b>Strategy (Talent)</b> : chaque talent redéfinit seulement son moment. Par défaut, entryDamage et endOfTurnHeal renvoient 0, les deux multiplicateurs renvoient 1. Le talent calcule ; le moteur applique et envoie les événements.
+  <b>Talent</b> : la fiche conserve un identifiant ; les effets sont prévus dans #24.
   <b>Fakemon</b> : une exception si moves ne contient pas 4 attaques. getStats() renvoie les stats de l'espèce jusqu'à l'issue 24. currentHp reste entre 0 et getMaxHp().
   <b>Team</b> : une exception au-delà de 6 fakemons.
   <b>Stats</b> : des double, car le GDD n'arrondit les dégâts qu'à la fin. Les objets ne changent jamais les PV : getHp() reste un int.

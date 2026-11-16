@@ -12,13 +12,16 @@ import org.junit.jupiter.api.Test;
 class FakemonTest {
 
     private Species createSpecies() {
-        return new Species(
-            "Test",
-            "Test",
-            List.of(),
-            new BaseStats(100, 100, 100, 100, 100, 100),
-            List.of()
-        );
+        return new Species.Builder()
+            .originalName("Test")
+            .frenchName("Test")
+            .types(List.of())
+            .stats(new BaseStats(100, 100, 100, 100, 100, 100))
+            .possibleMoves(List.of())
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/test.png")
+            .backSprite("/sprites/back/test.png")
+            .build();
     }
 
     private Move createMove() {

@@ -12,13 +12,16 @@ import org.junit.jupiter.api.Test;
 class TeamTest {
 
     private Fakemon createFakemon() {
-        Species species = new Species(
-            "Test",
-            "Test",
-            List.of(),
-            new BaseStats(100, 100, 100, 100, 100, 100),
-            List.of()
-        );
+        Species species = new Species.Builder()
+            .originalName("Test")
+            .frenchName("Test")
+            .types(List.of())
+            .stats(new BaseStats(100, 100, 100, 100, 100, 100))
+            .possibleMoves(List.of())
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/test.png")
+            .backSprite("/sprites/back/test.png")
+            .build();
         Move move = new Move(
             "Test",
             Type.FIRE,

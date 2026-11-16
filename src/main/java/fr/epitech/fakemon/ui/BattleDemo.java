@@ -18,10 +18,12 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Type;
 import fr.epitech.fakemon.data.InMemorySpeciesRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /** Scénario de démonstration de l'écran de combat. */
@@ -87,8 +89,17 @@ final class BattleDemo {
     }
 
     private Fakemon createFakemon(String originalName, String frenchName, int hp, Type... types) {
-        Species species = new Species(originalName, frenchName, List.of(types),
-                new BaseStats(hp, 50, 50, 50, 50, 50), moves);
+        String spriteName = originalName.toLowerCase(Locale.ROOT) + ".png";
+        Species species = new Species.Builder()
+            .originalName(originalName)
+            .frenchName(frenchName)
+            .types(List.of(types))
+            .stats(new BaseStats(hp, 50, 50, 50, 50, 50))
+            .possibleMoves(moves)
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/" + spriteName)
+            .backSprite("/sprites/back/" + spriteName)
+            .build();
         return new Fakemon(species, moves);
     }
 

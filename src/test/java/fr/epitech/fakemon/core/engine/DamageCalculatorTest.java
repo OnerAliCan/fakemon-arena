@@ -9,6 +9,7 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Type;
 import java.util.List;
 import java.util.Random;
@@ -216,7 +217,16 @@ class DamageCalculatorTest {
     }
 
     private Fakemon createFakemon(List<Type> types, BaseStats stats) {
-        Species species = new Species("Test", "Test", types, stats, List.of());
+        Species species = new Species.Builder()
+            .originalName("Test")
+            .frenchName("Test")
+            .types(types)
+            .stats(stats)
+            .possibleMoves(List.of())
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/test.png")
+            .backSprite("/sprites/back/test.png")
+            .build();
         Move move = createMove(Type.FIRE, MoveCategory.PHYSICAL, 65, 100);
         return new Fakemon(species, List.of(move, move, move, move));
     }

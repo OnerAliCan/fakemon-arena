@@ -131,16 +131,18 @@ package "data" {
   }
   class JsonSpeciesRepository <<#22>> {
     - speciesList : List<Species>
+    - movesById : Map<String, Move>
     - factory : SpeciesFactory
     - userFolder : Path
     --
     + JsonSpeciesRepository(factory, userFolder)
     + les 3 méthodes de SpeciesRepository
     - load() : void
-    - save(species) : void
+    - loadUserFile(file : Path) : void
+    - validateSpecies(species : Species) : void
   }
   class SpeciesFactory <<#22>> {
-    + createSpecies(json) : Species
+    + createSpecies(json, movesById) : Species
     + createMove(json) : Move
   }
 }

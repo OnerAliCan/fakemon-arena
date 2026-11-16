@@ -11,6 +11,7 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Type;
 
 import java.util.ArrayList;
@@ -62,7 +63,16 @@ public class RandomOpponentTest {
 
     private Fakemon createFakemon(String name, Type type) {
         BaseStats stats = new BaseStats(100, 100, 100, 100, 100, 100);
-        Species species = new Species(name, name, List.of(type), stats, List.of());
+        Species species = new Species.Builder()
+            .originalName(name)
+            .frenchName(name)
+            .types(List.of(type))
+            .stats(stats)
+            .possibleMoves(List.of())
+            .talent(Talent.CARAPACE)
+            .frontSprite("/sprites/front/test.png")
+            .backSprite("/sprites/back/test.png")
+            .build();
         return new Fakemon(species, createMoveList());
     }
 }
