@@ -19,6 +19,8 @@ import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
 import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
 import fr.epitech.fakemon.core.api.HpLostEvent;
+import fr.epitech.fakemon.core.api.HpRestoredEvent;
+import fr.epitech.fakemon.core.api.ItemActivatedEvent;
 import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.MoveMissedEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
@@ -27,8 +29,13 @@ import fr.epitech.fakemon.core.api.PlayerAction;
 import fr.epitech.fakemon.core.api.SelectionReason;
 import fr.epitech.fakemon.core.api.SendFakemon;
 import fr.epitech.fakemon.core.api.Side;
+import fr.epitech.fakemon.core.api.TalentActivatedEvent;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
 import fr.epitech.fakemon.core.api.UseMove;
+import fr.epitech.fakemon.core.effects.Ability;
+import fr.epitech.fakemon.core.effects.Fracas;
+import fr.epitech.fakemon.core.effects.Recuperation;
+import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.Team;
@@ -50,6 +57,8 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
     private Random random;
     private int turnNumber;
     private BattlePhase phase;
+    private final Ability fracas = new Fracas();
+    private final Ability recuperation = new Recuperation();
     private final TypeChart typeChart = new TypeChart();
     
     @Override
@@ -98,8 +107,7 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
             activePlayerFakemon = playerTeam.getFakemons().get(0);
             activeOpponentFakemon = opponentTeam.getFakemons().get(0);
             turnNumber = 1;
-            notifyListeners(new FakemonEnteredEvent(Side.PLAYER, activePlayerFakemon));
-            notifyListeners(new FakemonEnteredEvent(Side.OPPONENT, activeOpponentFakemon));
+            announceBothEntries(Side.PLAYER);
             notifyListeners(new TurnStartedEvent(turnNumber));
             phase = BattlePhase.WAITING_ACTION;
         } else {
@@ -130,8 +138,7 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
             activePlayerFakemon = sendfakemon.getFakemon();
             activeOpponentFakemon = opponentTeam.getFakemons().get(0);
             turnNumber = 1;
-            notifyListeners(new FakemonEnteredEvent(Side.PLAYER, activePlayerFakemon));
-            notifyListeners(new FakemonEnteredEvent(Side.OPPONENT, activeOpponentFakemon));
+            announceBothEntries(Side.PLAYER);
             notifyListeners(new TurnStartedEvent(turnNumber));
             phase = BattlePhase.WAITING_ACTION;
         } else if (phase == BattlePhase.WAITING_ACTION
@@ -151,13 +158,10 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
             checkCanEnter(Side.PLAYER, playerSend.getFakemon());
             if (activeOpponentFakemon.isFainted()) {
                 Fakemon opponentReplacement = chooseOpponentReplacement();
-                if (fasterSide() == Side.PLAYER) {
-                    sendFakemon(Side.PLAYER, playerSend.getFakemon());
-                    sendFakemon(Side.OPPONENT, opponentReplacement);
-                } else {
-                    sendFakemon(Side.OPPONENT, opponentReplacement);
-                    sendFakemon(Side.PLAYER, playerSend.getFakemon());
-                }
+                Side first = fasterSide();
+                activePlayerFakemon = playerSend.getFakemon();
+                activeOpponentFakemon = opponentReplacement;
+                announceBothEntries(first);
             } else {
                 sendFakemon(Side.PLAYER, playerSend.getFakemon());
             }
@@ -301,6 +305,12 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
     if (effectiveness.isPresent()) {
         notifyListeners(new EffectivenessEvent(targetSide, target, effectiveness.get()));
     }
+    if (result.getAttackerTalent() != null) {
+        notifyListeners(new TalentActivatedEvent(side, attacker, result.getAttackerTalent()));
+    }
+    if (result.getDefenderTalent() != null) {
+        notifyListeners(new TalentActivatedEvent(targetSide, target, result.getDefenderTalent()));
+    }
     notifyListeners(new HpLostEvent(targetSide, target, hpLost, target.getCurrentHp()));
 
     if (target.isFainted()) {
@@ -320,7 +330,61 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
         } else {
             activeOpponentFakemon = fakemon;
         }
-        notifyListeners(new FakemonEnteredEvent(side, fakemon));
+        announceEntry(side);
+        applyFracas(side);
+    }
+
+    private Side otherSide(Side side) {
+        return side == Side.PLAYER ? Side.OPPONENT : Side.PLAYER;
+    }
+
+    private void announceBothEntries(Side first) {
+        Side second = otherSide(first);
+        announceEntry(first);
+        announceEntry(second);
+        applyFracas(first);
+        applyFracas(second);
+    }
+
+    private void announceEntry(Side side) {
+        Fakemon entrant = getActiveFakemon(side);
+        notifyListeners(new FakemonEnteredEvent(side, entrant));
+        if (entrant.getItem() != null) {
+            notifyListeners(new ItemActivatedEvent(side, entrant, entrant.getItem()));
+        }
+    }
+
+    private void applyFracas(Side side) {
+        Fakemon entrant = getActiveFakemon(side);
+        Side targetSide = otherSide(side);
+        Fakemon target = getActiveFakemon(targetSide);
+        int damage = fracas.entryDamage(entrant, target);
+        if (damage > 0) {
+            target.takeDamage(damage);
+            notifyListeners(new TalentActivatedEvent(side, entrant, Talent.FRACAS));
+            notifyListeners(new HpLostEvent(targetSide, target, damage, target.getCurrentHp()));
+        }
+    }
+
+    private void applyEndOfTurnTalents() {
+        int playerHeal = recuperation.endOfTurnHeal(activePlayerFakemon);
+        int opponentHeal = recuperation.endOfTurnHeal(activeOpponentFakemon);
+        if (playerHeal > 0 && opponentHeal > 0 && fasterSide() == Side.OPPONENT) {
+            applyRecovery(Side.OPPONENT, opponentHeal);
+            applyRecovery(Side.PLAYER, playerHeal);
+        } else {
+            applyRecovery(Side.PLAYER, playerHeal);
+            applyRecovery(Side.OPPONENT, opponentHeal);
+        }
+    }
+
+    private void applyRecovery(Side side, int amount) {
+        if (amount > 0) {
+            Fakemon holder = getActiveFakemon(side);
+            holder.heal(amount);
+            notifyListeners(new TalentActivatedEvent(side, holder, Talent.RECUPERATION));
+            notifyListeners(new HpRestoredEvent(side, holder, amount, holder.getCurrentHp()));
+        }
     }
 
     /**
@@ -330,6 +394,7 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
      * Sinon, ou après ce remplacement, le tour suivant commence.
      */
     private void applyEndOfTurn() {
+        applyEndOfTurnTalents();
         if (!playerTeam.hasStandingFakemon()) {
             notifyListeners(new BattleEndedEvent(Side.OPPONENT, BattleEndReason.ALL_FAINTED));
             phase = BattlePhase.FINISHED;

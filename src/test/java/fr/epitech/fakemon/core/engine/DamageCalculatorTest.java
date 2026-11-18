@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.epitech.fakemon.core.model.BaseStats;
 import fr.epitech.fakemon.core.model.Fakemon;
+import fr.epitech.fakemon.core.model.Item;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
@@ -212,6 +213,34 @@ class DamageCalculatorTest {
         assertEquals(first.isCritical(), second.isCritical());
     }
 
+    @Test
+    void ganteletIncreasesPhysicalAndSpecialDamage() {
+        assertItemChangesDamage(Item.GANTELET, true);
+    }
+
+    @Test
+    void ecuReducesPhysicalAndSpecialDamage() {
+        assertItemChangesDamage(Item.ECU, false);
+    }
+
+    private void assertItemChangesDamage(Item item, boolean increasesDamage) {
+        for (MoveCategory category : List.of(MoveCategory.PHYSICAL, MoveCategory.SPECIAL)) {
+            Fakemon attacker = createFakemon(List.of(Type.FIRE), NEUTRAL_STATS);
+            Fakemon defender = createFakemon(List.of(Type.FIRE), NEUTRAL_STATS);
+            Move move = createMove(Type.FIRE, category, 100, 100);
+            int baseDamage = createCalculator(NO_CRITICAL_SEED).calculate(attacker, defender, move).getDamage();
+
+            if (increasesDamage) {
+                attacker.equip(item);
+            } else {
+                defender.equip(item);
+            }
+            int equippedDamage = createCalculator(NO_CRITICAL_SEED).calculate(attacker, defender, move).getDamage();
+            assertTrue(increasesDamage ? equippedDamage > baseDamage : equippedDamage < baseDamage,
+                item + " / " + category + " : " + baseDamage + " -> " + equippedDamage);
+        }
+    }
+
     private DamageCalculator createCalculator(long seed) {
         return new DamageCalculator(new Random(seed), new TypeChart());
     }
@@ -223,7 +252,7 @@ class DamageCalculatorTest {
             .types(types)
             .stats(stats)
             .possibleMoves(List.of())
-            .talent(Talent.CARAPACE)
+            .talent(Talent.FRACAS)
             .frontSprite("/sprites/front/test.png")
             .backSprite("/sprites/back/test.png")
             .build();

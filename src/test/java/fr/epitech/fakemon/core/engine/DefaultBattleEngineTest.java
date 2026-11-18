@@ -2,6 +2,7 @@ package fr.epitech.fakemon.core.engine;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,6 +19,8 @@ import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
 import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
 import fr.epitech.fakemon.core.api.HpLostEvent;
+import fr.epitech.fakemon.core.api.ItemActivatedEvent;
+import fr.epitech.fakemon.core.api.HpRestoredEvent;
 import fr.epitech.fakemon.core.api.MoveMissedEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
 import fr.epitech.fakemon.core.api.Opponent;
@@ -25,10 +28,12 @@ import fr.epitech.fakemon.core.api.PlayerAction;
 import fr.epitech.fakemon.core.api.SelectionReason;
 import fr.epitech.fakemon.core.api.SendFakemon;
 import fr.epitech.fakemon.core.api.Side;
+import fr.epitech.fakemon.core.api.TalentActivatedEvent;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
 import fr.epitech.fakemon.core.api.UseMove;
 import fr.epitech.fakemon.core.model.BaseStats;
 import fr.epitech.fakemon.core.model.Fakemon;
+import fr.epitech.fakemon.core.model.Item;
 import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
@@ -352,6 +357,171 @@ class DefaultBattleEngineTest {
         CriticalHitEvent critical = (CriticalHitEvent) listener.events.get(1);
         assertEquals(Side.OPPONENT, critical.getSide());
         assertSame(opponentMon, critical.getFakemon());
+    }
+
+    @Test
+    void carapaceReducesSuperEffectiveDamageAndIsAnnouncedBeforeLostHp() {
+        Move move = createMove("Massue", 100, 100, 0);
+        Fakemon attacker = createFakemon("Alpha", FAST, move);
+        Fakemon defender = createFakemon("Gamma", Type.ROCK, SLOW, WEAK, Talent.CARAPACE);
+
+        Random referenceRandom = new Random(NO_CRITICAL_SEED);
+        DamageCalculator reference = new DamageCalculator(referenceRandom, new TypeChart());
+        Fakemon neutralTalent = createFakemon("Gamma", Type.ROCK, SLOW, WEAK);
+        assertTrue(reference.rollAccuracy(move));
+        int fullDamage = reference.calculate(attacker, neutralTalent, move).getDamage();
+
+        startDuel(attacker, defender, NO_CRITICAL_SEED);
+        engine.submitAction(new UseMove(move));
+
+        TalentActivatedEvent activation = listener.eventsOfType(TalentActivatedEvent.class).getFirst();
+        HpLostEvent loss = listener.eventsOfType(HpLostEvent.class).getFirst();
+        assertEquals(Side.OPPONENT, activation.getSide());
+        assertSame(defender, activation.getFakemon());
+        assertEquals(Talent.CARAPACE, activation.getTalent());
+        assertTrue(listener.events.indexOf(activation) < listener.events.indexOf(loss));
+        assertEquals(Effectiveness.SUPER_EFFECTIVE,
+            listener.eventsOfType(EffectivenessEvent.class).getFirst().getEffectiveness());
+        assertEquals(100 - loss.getHpLost(), defender.getCurrentHp());
+        int lowerBound = (int) (fullDamage * 0.75);
+        assertTrue(loss.getHpLost() >= lowerBound && loss.getHpLost() <= lowerBound + 1);
+    }
+
+    @Test
+    void dernierSouffleDoesNotActivateAtExactlyOneThird() {
+        Fakemon attacker = new Fakemon(
+            new Species.Builder()
+                .originalName("Alpha")
+                .frenchName("Alpha")
+                .types(List.of(Type.FORCE))
+                .stats(new BaseStats(90, 100, 100, 100, 100, FAST))
+                .possibleMoves(List.of(WEAK))
+                .talent(Talent.DERNIER_SOUFFLE)
+                .frontSprite("/sprites/front/test.png")
+                .backSprite("/sprites/back/test.png")
+                .build(),
+            List.of(WEAK, WEAK, WEAK, WEAK)
+        );
+        attacker.takeDamage(60);
+        var defender = createFakemon("Gamma", SLOW, WEAK);
+        var calculator = new DamageCalculator(new Random(NO_CRITICAL_SEED), new TypeChart());
+
+        assertNull(calculator.calculate(attacker, defender, WEAK).getAttackerTalent());
+        attacker.takeDamage(1);
+        assertEquals(Talent.DERNIER_SOUFFLE, calculator.calculate(attacker, defender, WEAK).getAttackerTalent());
+    }
+
+    @Test
+    void dernierSouffleAndCarapaceCanActivateOnTheSameHit() {
+        Move move = createMove("Massue", 100, 100, 0);
+        Fakemon attacker = createFakemon("Alpha", Type.FORCE, FAST, move, Talent.DERNIER_SOUFFLE);
+        Fakemon defender = createFakemon("Gamma", Type.ROCK, SLOW, WEAK, Talent.CARAPACE);
+        attacker.takeDamage(67);
+
+        var reference = new DamageCalculator(new Random(NO_CRITICAL_SEED), new TypeChart());
+        assertTrue(reference.rollAccuracy(move));
+        var neutralAttacker = createFakemon("Alpha", FAST, move);
+        var neutralDefender = createFakemon("Gamma", Type.ROCK, SLOW, WEAK);
+        int fullDamage = reference.calculate(neutralAttacker, neutralDefender, move).getDamage();
+
+        startDuel(attacker, defender, NO_CRITICAL_SEED);
+        engine.submitAction(new UseMove(move));
+
+        var activations = listener.eventsOfType(TalentActivatedEvent.class);
+        assertEquals(2, activations.size());
+        assertEquals(Talent.DERNIER_SOUFFLE, activations.get(0).getTalent());
+        assertEquals(Side.PLAYER, activations.get(0).getSide());
+        assertSame(attacker, activations.get(0).getFakemon());
+        assertEquals(Talent.CARAPACE, activations.get(1).getTalent());
+        assertEquals(Side.OPPONENT, activations.get(1).getSide());
+        assertSame(defender, activations.get(1).getFakemon());
+
+        int damage = listener.eventsOfType(HpLostEvent.class).getFirst().getHpLost();
+        int lowerBound = (int) (fullDamage * 1.5 * 0.75);
+        assertTrue(damage >= lowerBound && damage <= lowerBound + 2);
+    }
+
+    @Test
+    void fracasTriggersOnEntryAndCannotKnockOutTheOpponent() {
+        Fakemon attacker = createFakemon("Alpha", Type.FORCE, FAST, MISS, Talent.FRACAS);
+        Fakemon defender = createFakemon("Gamma", SLOW, MISS);
+        defender.takeDamage(95);
+        engine.addListener(listener);
+        engine.start(new Team(List.of(attacker)), new Team(List.of(defender)),
+            BattleMode.RANDOM, new FirstMoveOpponent(), new Random(NO_CRITICAL_SEED));
+
+        assertEquals(1, defender.getCurrentHp());
+        var activation = listener.eventsOfType(TalentActivatedEvent.class).getFirst();
+        assertEquals(Talent.FRACAS, activation.getTalent());
+        assertSame(attacker, activation.getFakemon());
+        assertEquals(4, listener.eventsOfType(HpLostEvent.class).getFirst().getHpLost());
+        assertTrue(listener.eventsOfType(FakemonFaintedEvent.class).isEmpty());
+    }
+
+    @Test
+    void fracasTargetsTheFakemonOnTheFieldWhenEachSwitchResolves() {
+        Fakemon player = createFakemon("Alpha", FAST, WEAK);
+        Fakemon opponent = createFakemon("Gamma", SLOW, WEAK);
+        Fakemon playerReplacement = createFakemon("Beta", Type.FORCE, SLOW, WEAK, Talent.FRACAS);
+        Fakemon opponentReplacement = createFakemon("Delta", Type.FORCE, SLOW, WEAK, Talent.FRACAS);
+        startBattle(new Team(List.of(player, playerReplacement)),
+            new Team(List.of(opponent, opponentReplacement)), NO_CRITICAL_SEED);
+
+        this.opponent.forcedAction = new SendFakemon(opponentReplacement);
+        engine.submitAction(new SendFakemon(playerReplacement));
+
+        var losses = listener.eventsOfType(HpLostEvent.class);
+        assertEquals(2, losses.size());
+        assertSame(opponent, losses.get(0).getFakemon());
+        assertSame(playerReplacement, losses.get(1).getFakemon());
+        assertEquals(90, opponent.getCurrentHp());
+        assertEquals(90, playerReplacement.getCurrentHp());
+        assertEquals(100, opponentReplacement.getCurrentHp());
+    }
+
+    @Test
+    void recuperationHealsFasterFakemonFirstAndCapsAtMaxHp() {
+        Fakemon player = createFakemon("Alpha", Type.FORCE, SLOW, MISS, Talent.RECUPERATION);
+        Fakemon opponent = createFakemon("Gamma", Type.FORCE, FAST, MISS, Talent.RECUPERATION);
+        player.takeDamage(3);
+        opponent.takeDamage(20);
+        startDuel(player, opponent, NO_CRITICAL_SEED);
+        engine.submitAction(new UseMove(MISS));
+
+        var heals = listener.eventsOfType(HpRestoredEvent.class);
+        assertEquals(2, heals.size());
+        assertEquals(Side.OPPONENT, heals.get(0).getSide());
+        assertEquals(10, heals.get(0).getHpRestored());
+        assertEquals(Side.PLAYER, heals.get(1).getSide());
+        assertEquals(3, heals.get(1).getHpRestored());
+        assertEquals(100, player.getCurrentHp());
+        assertEquals(90, opponent.getCurrentHp());
+        assertEquals(2, listener.eventsOfType(TalentActivatedEvent.class).size());
+    }
+
+    @Test
+    void plumeChangesTurnOrderAndIsAnnouncedOnEntry() {
+        Fakemon player = createFakemon("Alpha", 100, MISS);
+        Fakemon opponent = createFakemon("Gamma", 110, MISS);
+        player.equip(Item.PLUME);
+        engine.addListener(listener);
+        engine.start(new Team(List.of(player)), new Team(List.of(opponent)),
+            BattleMode.RANDOM, new FirstMoveOpponent(), new Random(NO_CRITICAL_SEED));
+
+        var activation = listener.eventsOfType(ItemActivatedEvent.class).getFirst();
+        assertEquals(Item.PLUME, activation.getItem());
+        assertSame(player, activation.getFakemon());
+        engine.submitAction(new UseMove(MISS));
+        assertEquals(Side.PLAYER, listener.eventsOfType(MoveUsedEvent.class).getFirst().getSide());
+    }
+
+    @Test
+    void carapaceDoesNotActivateOnNeutralDamage() {
+        Fakemon defender = createFakemon("Gamma", Type.FORCE, SLOW, WEAK, Talent.CARAPACE);
+        startDuel(createFakemon("Alpha", FAST, WEAK), defender, NO_CRITICAL_SEED);
+        engine.submitAction(new UseMove(WEAK));
+
+        assertTrue(listener.eventsOfType(TalentActivatedEvent.class).isEmpty());
     }
 
     @Test
@@ -823,13 +993,17 @@ class DefaultBattleEngineTest {
         int speed,
         Move firstMove
     ) {
+        return createFakemon(name, type, speed, firstMove, Talent.DERNIER_SOUFFLE);
+    }
+
+    private static Fakemon createFakemon(String name, Type type, int speed, Move firstMove, Talent talent) {
         Species species = new Species.Builder()
             .originalName(name)
             .frenchName(name)
             .types(List.of(type))
             .stats(new BaseStats(100, 100, 100, 100, 100, speed))
             .possibleMoves(List.of(firstMove, WEAK, WEAK, WEAK))
-            .talent(Talent.CARAPACE)
+            .talent(talent)
             .frontSprite("/sprites/front/test.png")
             .backSprite("/sprites/back/test.png")
             .build();

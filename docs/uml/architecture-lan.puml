@@ -4,47 +4,56 @@ skinparam dpi 110
 skinparam shadowing false
 skinparam defaultFontName "Segoe UI"
 skinparam packageStyle rectangle
-skinparam ArrowColor #3A4170
-skinparam rectangle {
-  BackgroundColor<<devA>> #DCE8F7
-  BorderColor<<devA>> #2F5F9E
-  BackgroundColor<<devB>> #FFF6D6
-  BorderColor<<devB>> #B8901A
-  BackgroundColor<<bonus>> #F2F2F2
-  BorderColor<<bonus>> #888888
-}
-hide stereotype
-title Fakemon Arena · combat en réseau local, bonus (v1)\nProposition, à confirmer par le spike (#34). Seul le PC de l'hôte fait tourner l'arbitre.
+title Fakemon Arena · architecture du combat LAN
 
 package "PC de l'hôte" {
-  rectangle "Écran de combat" as EcranHote <<devB>>
-  rectangle "DefaultBattleEngine\nl'arbitre, le même que contre l'IA" as Engine <<devA>>
-  rectangle "NetworkOpponent\nimplémente Opponent" as NetOpp <<bonus>>
-  rectangle "NetworkEventSender\nimplémente BattleListener" as NetSend <<bonus>>
+  [NetworkLobbyScreen] as LobbyHost
+  [BattleScreen] as ScreenHost
+  [NetworkBattleController] as ControllerHost
+  [NetworkBattleCoordinator] as Coordinator
+  [DefaultBattleEngine] as Engine
+  [NetworkOpponentChannel] as Channel
+  [NetworkOpponent] as Opponent
+  [NetworkConnection] as ConnectionHost
+  [NetworkBattleState] as StateHost
 }
-
 package "PC de l'invité" {
-  rectangle "NetworkBattleEngine\nimplémente BattleEngine" as NetEngine <<bonus>>
-  rectangle "Écran de combat\nle même que contre l'IA" as EcranInvite <<devB>>
+  [NetworkLobbyScreen] as LobbyGuest
+  [BattleScreen] as ScreenGuest
+  [NetworkBattleController] as ControllerGuest
+  [NetworkGuestSession] as Guest
+  [NetworkConnection] as ConnectionGuest
+  [NetworkBattleState] as StateGuest
 }
+LobbyHost --> ControllerHost : connexion acceptée
+LobbyGuest --> ControllerGuest : connexion ouverte
+ScreenHost --> ControllerHost : choix du joueur
+ControllerHost --> Coordinator : submitHostAction
+Coordinator --> Engine : start, submitAction
+Engine --> Channel : chooseAction, chooseFakemon
+Channel --> Opponent : attend le choix distant
+Coordinator --> Channel : réponse lue sur le réseau
+Channel --> ConnectionHost : ACTION_REQUIRED
+Coordinator --> ConnectionHost : BATTLE_START, EVENT
+Coordinator --> ControllerHost : messages locaux
+ControllerHost --> StateHost : applique les événements
+ControllerHost --> ScreenHost : événements et choix attendu
+ScreenGuest --> ControllerGuest : choix du joueur
+ControllerGuest --> Guest : submitAction
+Guest --> ConnectionGuest : ACTION
+ConnectionHost <--> ConnectionGuest : TCP UTF-8, port 5000, un message JSON par ligne
+Guest --> ControllerGuest : messages reçus
+ControllerGuest --> StateGuest : applique les événements
+ControllerGuest --> ScreenGuest : événements et choix attendu
 
-EcranHote --> Engine : submitAction
-Engine --> EcranHote : onEvent
-Engine --> NetOpp : chooseAction,\nchooseFakemon
-Engine --> NetSend : onEvent
-
-EcranInvite --> NetEngine : submitAction
-NetEngine --> EcranInvite : onEvent\n(Platform.runLater)
-
-NetEngine --> NetOpp : socket, JSON :\naction de l'invité
-NetSend --> NetEngine : socket, JSON :\nevents du combat
-
-legend bottom left
-  <b>Ce qui ne change pas :</b> l'arbitre et les écrans. Chacun voit toujours un Opponent ou un BattleEngine, sans savoir qu'il y a un réseau derrière.
-  <b>À régler au spike (#34) :</b>
-  1. Threads : chooseAction attend la réponse de l'invité. Sur l'hôte, l'arbitre doit donc tourner hors du thread JavaFX, sinon la fenêtre se fige.
-  2. Camps : l'hôte est PLAYER chez lui. Les events reçus par l'invité doivent inverser PLAYER et OPPONENT.
-  3. JSON : les events contiennent des objets Fakemon. Il faut définir ce qui passe sur le réseau, par exemple un camp et une position dans l'équipe.
-  4. État : getState n'a pas d'arbitre derrière chez l'invité. NetworkBattleEngine doit tenir une copie à jour à partir des events.
-endlegend
+note bottom of Coordinator
+  Un thread résout le combat.
+  Un autre lit les actions de l'invité.
+  Les demandes portent un identifiant.
+end note
+note bottom of ControllerGuest
+  Platform.runLater applique les messages sur JavaFX.
+  NetworkEventCodec adapte les camps à l'invité.
+  Les équipes locales conservent les PV et les actifs.
+end note
 @enduml

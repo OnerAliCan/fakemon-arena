@@ -10,6 +10,8 @@ public class Fakemon {
     private final Species species;
     private final List<Move> moves;
     private int currentHp;
+    private Item item;
+    private Stats battleStats;
 
     /**
      * Crée un Fakemon avec tous ses PV.
@@ -40,7 +42,22 @@ public class Fakemon {
     }
 
     public Stats getStats() {
-        return species.getStats();
+        return battleStats == null ? species.getStats() : battleStats;
+    }
+
+    /** @return l'objet tenu, ou null si le Fakemon n'en a pas */
+    public Item getItem() {
+        return item;
+    }
+
+    /**
+     * Équipe un objet et recalcule les bonus depuis les statistiques de base.
+     *
+     * @param item l'objet à tenir, ou null pour le retirer
+     */
+    public void equip(Item item) {
+        this.item = item;
+        battleStats = item == null ? null : item.decorate(species.getStats());
     }
 
     public int getMaxHp() {

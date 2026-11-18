@@ -6,6 +6,8 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 |---|---|---|
 | Architecture : vue d'ensemble | [architecture.puml](architecture.puml) | #6 |
 | Architecture : réseau local (bonus) | [architecture-lan.puml](architecture-lan.puml) | #6 |
+| Classes du réseau LAN | [classes-reseau.puml](classes-reseau.puml) | #35 |
+| Séquence d'un tour LAN | [sequence-lan.puml](sequence-lan.puml) | #35 |
 | Séquence d'un tour | [sequence-tour.puml](sequence-tour.puml) | #6 |
 | Classes : modèle et effets | [classes-modele.puml](classes-modele.puml) | #6 |
 | Classes : moteur, IA et données | [classes-moteur.puml](classes-moteur.puml) | #6 |
@@ -19,11 +21,16 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 | Navigation : combat en ligne (bonus) | [combat-en-ligne.puml](combat-en-ligne.puml) | #5 |
 | Navigation : écran de combat | [combat.puml](combat.puml) | #5 |
 | Navigation : Mondex | [mondex.puml](mondex.puml) | #5 |
+| Classes du Mondex | [classes-mondex.puml](classes-mondex.puml) | #45 |
 | Navigation : Ajouter un Mon | [ajouter-un-mon.puml](ajouter-un-mon.puml) | #5 |
 
 ![Architecture, vue d'ensemble](architecture.png)
 
 ![Architecture du réseau local](architecture-lan.png)
+
+![Classes du réseau LAN](classes-reseau.png)
+
+![Séquence d'un tour LAN](sequence-lan.png)
 
 ![Séquence d'un tour](sequence-tour.png)
 
@@ -50,6 +57,8 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 ![Écran de combat](combat.png)
 
 ![Mondex](mondex.png)
+
+![Classes du Mondex](classes-mondex.png)
 
 ![Ajouter un Mon](ajouter-un-mon.png)
 

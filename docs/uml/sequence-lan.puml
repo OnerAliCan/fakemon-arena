@@ -1,0 +1,55 @@
+@startuml sequence-lan
+skinparam dpi 110
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+title Fakemon Arena · tour en LAN
+actor Hôte
+participant "BattleScreen hôte" as HostUI
+participant "NetworkBattleController hôte" as HostController
+participant "NetworkBattleCoordinator" as Coordinator
+participant "DefaultBattleEngine" as Engine
+participant "NetworkOpponentChannel" as Opponent
+participant "NetworkGuestSession" as Guest
+participant "NetworkBattleController invité" as GuestController
+participant "BattleScreen invité" as GuestUI
+actor Invité
+
+Coordinator -> Guest : BATTLE_START avec les deux équipes
+Coordinator -> HostController : BATTLE_START
+Guest -> GuestController : BATTLE_START
+HostController -> HostController : Platform.runLater
+GuestController -> GuestController : Platform.runLater
+Coordinator -> HostController : ACTION_REQUIRED, requestId
+HostController -> HostUI : activer le choix
+Hôte -> HostUI : attaque ou changement
+HostUI -> HostController : PlayerAction
+HostController -> Coordinator : ACTION avec requestId
+Coordinator -> Engine : submitAction, thread moteur
+Engine -> Opponent : chooseAction
+Opponent -> Guest : ACTION_REQUIRED, requestId
+Guest -> GuestController : demande reçue
+GuestController -> GuestUI : activer le choix sur JavaFX
+Invité -> GuestUI : attaque ou changement
+GuestUI -> GuestController : PlayerAction
+GuestController -> Guest : ACTION avec requestId
+Guest -> Coordinator : ligne JSON, lecteur réseau de l'hôte
+Coordinator -> Opponent : receiveAction
+Opponent --> Engine : action de l'invité
+Engine -> Engine : résoudre les actions
+loop événements du tour
+  Engine -> Coordinator : BattleEvent
+  Coordinator -> HostController : EVENT
+  Coordinator -> Guest : EVENT
+  Guest -> GuestController : EVENT
+  HostController -> HostUI : état mis à jour et événement sur JavaFX
+  GuestController -> GuestUI : état mis à jour, camps adaptés, événement sur JavaFX
+end
+alt combat terminé
+  HostUI -> Hôte : bilan
+  GuestUI -> Invité : bilan
+  Coordinator -> Coordinator : fermer la session
+  Guest -> Guest : fermer la session
+else choix suivant
+  Coordinator -> HostController : ACTION_REQUIRED
+end
+@enduml

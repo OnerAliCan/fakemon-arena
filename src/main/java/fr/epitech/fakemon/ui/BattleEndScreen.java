@@ -21,7 +21,7 @@ public final class BattleEndScreen extends VBox {
      * @param reason raison de la fin du combat
      * @param turns nombre de tours joués
      * @param playerTeam équipe du joueur dans son état final
-     * @param replay action de nouveau tirage
+     * @param replay action de nouveau tirage, ou null pour proposer le retour au menu
      * @param menu action de retour au menu existant
      */
     public BattleEndScreen(Side winner, BattleEndReason reason, int turns, Team playerTeam,
@@ -53,11 +53,15 @@ public final class BattleEndScreen extends VBox {
             member.setPrefWidth(125);
             teamRow.getChildren().add(member);
         }
-        Button replayButton = new Button("Revanche");
-        replayButton.setOnAction(event -> replay.run());
         Button menuButton = new Button("Menu");
         menuButton.setOnAction(event -> menu.run());
-        HBox actions = new HBox(16, replayButton, menuButton);
+        HBox actions = new HBox(16);
+        if (replay != null) {
+            Button replayButton = new Button("Revanche");
+            replayButton.setOnAction(event -> replay.run());
+            actions.getChildren().add(replayButton);
+        }
+        actions.getChildren().add(menuButton);
         actions.setAlignment(Pos.CENTER);
         getChildren().addAll(title, turnLabel, reasonLabel, new Label("Votre équipe"), teamRow,
                 actions);

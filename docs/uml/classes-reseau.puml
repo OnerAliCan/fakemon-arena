@@ -1,0 +1,99 @@
+@startuml classes-reseau
+!pragma layout smetana
+skinparam dpi 110
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+hide empty members
+title Fakemon Arena · classes du réseau LAN
+interface Opponent
+interface BattleState
+class NetworkMessage {
+  - type : String
+  - payload : JsonObject
+}
+class NetworkMessageCodec {
+  + encode(message) : String
+  + decode(json) : NetworkMessage
+}
+class NetworkActionCodec {
+  + encode(action, team, active) : NetworkMessage
+  + decode(message, team, active) : PlayerAction
+}
+class NetworkEventCodec {
+  + encode(event) : NetworkMessage
+  + encodeSelection(event, recipient) : NetworkMessage
+  + decode(message) : Optional<BattleEvent>
+}
+class NetworkTeamCodec {
+  + encode(team) : NetworkMessage
+  + decode(message) : Team
+}
+class NetworkConnection {
+  + send(message)
+  + receive() : NetworkMessage
+  + close()
+}
+class NetworkHost {
+  + accept() : NetworkConnection
+  + getPort() : int
+  + close()
+}
+class NetworkClient {
+  + {static} connect(address, port) : NetworkConnection
+}
+class NetworkOpponent {
+  + chooseAction(moves, standing) : PlayerAction
+  + chooseFakemon(standing) : PlayerAction
+  + submitAction(action)
+  + close()
+}
+class NetworkOpponentChannel {
+  + chooseAction(moves, standing) : PlayerAction
+  + chooseFakemon(standing) : PlayerAction
+  + receiveAction(message)
+  + close()
+}
+class NetworkBattleCoordinator {
+  + start()
+  + submitHostAction(message) : CompletableFuture<Void>
+  + close()
+}
+class NetworkGuestSession {
+  + start()
+  + submitAction(message) : CompletableFuture<Void>
+  + close()
+}
+class NetworkBattleState {
+  + getTeam(side) : Team
+  + getActiveFakemon(side) : Fakemon
+  + getTurnNumber() : int
+  + apply(event)
+}
+class NetworkBattleController
+class NetworkLobbyScreen
+class BattleScreen
+class DefaultBattleEngine
+NetworkConnection --> NetworkMessageCodec
+NetworkMessageCodec --> NetworkMessage
+NetworkHost ..> NetworkConnection
+NetworkClient ..> NetworkConnection
+NetworkOpponent ..|> Opponent
+NetworkOpponentChannel ..|> Opponent
+NetworkBattleState ..|> BattleState
+NetworkOpponentChannel *-- NetworkOpponent
+NetworkOpponentChannel --> NetworkActionCodec
+NetworkOpponentChannel --> NetworkConnection
+NetworkBattleCoordinator *-- DefaultBattleEngine
+NetworkBattleCoordinator *-- NetworkOpponentChannel
+NetworkBattleCoordinator --> NetworkEventCodec
+NetworkBattleCoordinator --> NetworkTeamCodec
+NetworkGuestSession --> NetworkConnection
+NetworkBattleController --> NetworkBattleCoordinator
+NetworkBattleController --> NetworkGuestSession
+NetworkBattleController *-- NetworkBattleState
+NetworkBattleController --> NetworkEventCodec
+BattleScreen --> NetworkBattleController
+NetworkLobbyScreen ..> NetworkHost
+NetworkLobbyScreen ..> NetworkClient
+NetworkLobbyScreen ..> NetworkBattleController
+@enduml

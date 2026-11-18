@@ -47,7 +47,9 @@ package "le cœur du jeu, sans JavaFX" {
 }
 
 package "net · bonus" {
-  rectangle "NetworkOpponent\nl'adversaire en réseau local" as Net <<bonus>>
+  rectangle "NetworkOpponentChannel\nNetworkOpponent" as Net <<bonus>>
+  rectangle "NetworkBattleCoordinator\nNetworkGuestSession\nNetworkConnection" as Sessions <<bonus>>
+  rectangle "NetworkLobbyScreen\nNetworkBattleController\nNetworkBattleState" as LanView <<bonus>>
 }
 
 package "data · le catalogue" {
@@ -78,6 +80,11 @@ Engine --> Model
 
 AI .up.|> IOpponent
 Net .up.|> IOpponent
+Menus --> LanView : héberger, rejoindre
+Combat --> LanView : choix du joueur local
+LanView --> Sessions : actions et événements JSON
+Sessions --> Engine : moteur exécuté par l'hôte
+Sessions --> Net : choix de l'invité
 Repo .up.|> IRepo
 Repo --> Files : lit et écrit
 
@@ -85,8 +92,8 @@ legend bottom left
   <b>Le combat :</b> l'écran envoie l'action du joueur avec submitAction ; l'arbitre résout le tour et renvoie des faits avec onEvent (Observer).
   <b>L'IA et le multijoueur :</b> l'arbitre interroge un Opponent sans savoir qui répond (Strategy). Le réseau local s'ajoute donc sans toucher à l'arbitre.
   <b>Le dashboard :</b> Ajouter un Mon passe par le catalogue, comme le Mondex et le tirage des équipes. Un mon ajouté rejoint le jeu sans autre branchement.
-  <b>La frontière :</b> les écrans ne connaissent que core.api et les données de core.model. Le cœur n'importe jamais JavaFX : il se teste sans fenêtre.
-  <b>L'assemblage :</b> App crée les pièces concrètes et les donne aux écrans. C'est le seul endroit des écrans qui nomme core.engine, core.ai ou data.
+  <b>La frontière :</b> le cœur expose les actions et événements de core.api. Il se teste sans fenêtre.
+  <b>Le LAN :</b> les sessions travaillent en arrière-plan. NetworkBattleController applique les messages sur JavaFX.
   <b>Couleurs :</b> bleu pour Dev A, jaune pour Dev B, vert pour le contrat commun, gris pour le bonus.
 endlegend
 @enduml
