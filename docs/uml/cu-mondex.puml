@@ -11,7 +11,7 @@ skinparam rectangle {
   BorderColor #3A4170
   BackgroundColor #FAFAFD
 }
-title Fakemon Arena · cas d'utilisation, Mondex (v1)
+title Fakemon Arena · cas d'utilisation du Mondex
 
 actor "Joueur" as joueur
 
@@ -23,5 +23,5 @@ rectangle "Consulter le Mondex" {
 
 joueur --> mondex
 mondex <.. details : <<extend>>\nclic sur un mon
-details <.. ecouter : <<extend>>\nbouton du cri
+details <.. ecouter : <<extend>>\ncri renseigné
 @enduml
