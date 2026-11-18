@@ -10,6 +10,16 @@ public class BaseStats implements Stats {
     private final int specialDefense;
     private final int speed;
 
+    /**
+     * Conserve les six statistiques de base de l'espèce.
+     *
+     * @param hp les PV maximum
+     * @param attack l'attaque physique
+     * @param defense la défense physique
+     * @param specialAttack l'attaque spéciale
+     * @param specialDefense la défense spéciale
+     * @param speed la vitesse
+     */
     public BaseStats(
         int hp,
         int attack,

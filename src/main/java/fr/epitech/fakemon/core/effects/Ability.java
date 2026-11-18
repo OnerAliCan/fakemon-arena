@@ -4,6 +4,9 @@ import fr.epitech.fakemon.core.model.Fakemon;
 
 /** Effet d'un talent pendant un combat. */
 public abstract class Ability {
+    /** Prépare un talent et ses effets de combat. */
+    public Ability() {}
+
     /**
      * Donne le coefficient de degats recus.
      *
@@ -26,6 +29,8 @@ public abstract class Ability {
     }
 
     /**
+     * Calcule les dégâts du talent à l'entrée en jeu.
+     *
      * @param entrant le Fakemon qui entre
      * @param target le Fakemon en face
      * @return les dégâts à appliquer à l'entrée
@@ -35,6 +40,8 @@ public abstract class Ability {
     }
 
     /**
+     * Calcule les PV rendus par le talent en fin de tour.
+     *
      * @param holder le porteur du talent
      * @return les PV à rendre en fin de tour
      */

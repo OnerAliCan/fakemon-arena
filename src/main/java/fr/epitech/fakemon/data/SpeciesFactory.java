@@ -19,6 +19,9 @@ import java.util.Map;
  * C'est le patron Factory : le reste du jeu ne connaît pas le format JSON.
  */
 public class SpeciesFactory {
+    /** Crée une fabrique pour les fiches d'espèces et les attaques du catalogue. */
+    public SpeciesFactory() {}
+
 
     /**
      * Crée une attaque à partir de son JSON.

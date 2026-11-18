@@ -9,7 +9,7 @@ skinparam packageStyle rectangle
 skinparam noteBackgroundColor #FFF8DC
 skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #555555
-title Fakemon Arena · modèle et effets (v1)\nCe qui est sous une ligne « issue 24 » ou « issues 22 et 45 » s'ajoute plus tard.
+title Fakemon Arena · modèle et effets
 
 package "core.model" {
   enum Type <<#8>> {
@@ -83,6 +83,8 @@ package "core.model" {
   }
 
   class "Species.Builder" as SpeciesBuilder <<#22>> {
+    + Builder()
+    + méthodes de configuration renvoyant Builder
     + build() : Species
   }
 
@@ -138,6 +140,7 @@ package "core.effects" {
     - attack : double
     - defense : double
     - speed : double
+    + ItemStats(base, attack, defense, speed)
     + les 6 méthodes de Stats
   }
   abstract class Ability <<#24>> {
@@ -178,7 +181,8 @@ legend bottom left
   <b>Decorator (ItemStats)</b> : chaque objet crée une vue des stats de base et applique son bonus de 20 %.
   <b>Talent</b> : la fiche conserve un identifiant. Les classes Ability appliquent les effets en combat.
   <b>Fakemon</b> : une exception si moves ne contient pas 4 attaques. getStats() renvoie les stats avec les bonus si un objet est équipé. currentHp reste entre 0 et getMaxHp().
-  <b>Team</b> : une exception au-delà de 6 fakemons.
+  <b>Team</b> accepte de 0 à 6 Fakemon. getStandingFakemons() crée une liste des membres encore debout.
+  <b>Builder</b> vérifie la présence des champs obligatoires. JsonSpeciesRepository valide les valeurs du catalogue.
   <b>Stats</b> : des double, car le GDD n'arrondit les dégâts qu'à la fin. Les objets ne changent jamais les PV : getHp() reste un int.
 endlegend
 @enduml

@@ -10,6 +10,9 @@ import java.util.Optional;
  * Ses lignes (type de l'attaque) et ses colonnes (type de la cible) suivent l'ordre de l'enum {@link Type}.
  */
 public class TypeChart {
+    /** Charge la table fixe d'efficacité des dix types. */
+    public TypeChart() {}
+
 
     private final double[][] table = {
         { 0.5, 0.5, 2, 1, 1, 1, 2, 1, 1, 1 },

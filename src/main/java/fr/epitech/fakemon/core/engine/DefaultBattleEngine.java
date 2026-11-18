@@ -47,6 +47,9 @@ import fr.epitech.fakemon.core.model.Team;
  * Il sert aussi d'état du combat, en lecture seule, pour l'écran.
  */
 public class DefaultBattleEngine implements  BattleEngine, BattleState{
+    /** Crée un arbitre prêt à recevoir ses écouteurs et les équipes du combat. */
+    public DefaultBattleEngine() {}
+
     private final List<BattleListener> listeners = new ArrayList<>();
     private Team playerTeam;
     private Team opponentTeam;

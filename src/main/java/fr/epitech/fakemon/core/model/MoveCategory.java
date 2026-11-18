@@ -5,6 +5,8 @@ package fr.epitech.fakemon.core.model;
  * Attaque spéciale et Défense spéciale pour une attaque spéciale.
  */
 public enum MoveCategory {
+    /** Utilise l'attaque et la défense physiques. */
     PHYSICAL,
+    /** Utilise l'attaque spéciale et la défense spéciale. */
     SPECIAL,
 }
