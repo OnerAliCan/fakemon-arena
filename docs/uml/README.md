@@ -6,6 +6,8 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 |---|---|---|
 | Architecture : vue d'ensemble | [architecture.puml](architecture.puml) | #6 |
 | Architecture : réseau local (bonus) | [architecture-lan.puml](architecture-lan.puml) | #6 |
+| Classes du réseau LAN | [classes-reseau.puml](classes-reseau.puml) | #35 |
+| Séquence d'un tour LAN | [sequence-lan.puml](sequence-lan.puml) | #35 |
 | Séquence d'un tour | [sequence-tour.puml](sequence-tour.puml) | #6 |
 | Classes : modèle et effets | [classes-modele.puml](classes-modele.puml) | #6 |
 | Classes : moteur, IA et données | [classes-moteur.puml](classes-moteur.puml) | #6 |
@@ -24,6 +26,10 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 ![Architecture, vue d'ensemble](architecture.png)
 
 ![Architecture du réseau local](architecture-lan.png)
+
+![Classes du réseau LAN](classes-reseau.png)
+
+![Séquence d'un tour LAN](sequence-lan.png)
 
 ![Séquence d'un tour](sequence-tour.png)
 

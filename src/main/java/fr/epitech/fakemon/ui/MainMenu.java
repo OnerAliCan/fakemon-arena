@@ -34,17 +34,17 @@ public class MainMenu extends VBox {
                 optionsButton, creditsButton,
                 quitButton);
 
-        VBox onlineMenu = new VBox(15);
-        onlineMenu.setAlignment(Pos.CENTER);
-        Button onlineBackButton = new Button("Retour");
-        onlineMenu.getChildren().addAll(new Label("Combat en ligne"), onlineBackButton,
-                new Label("Mode bonus prévu ultérieurement"));
-
         combatOnlineButton.setOnAction(event -> {
-            sceneManager.show(onlineMenu);
-        });
-        onlineBackButton.setOnAction(event -> {
-            sceneManager.show(this);
+            Runnable menu = () -> sceneManager.show(this);
+            sceneManager.show(new NetworkLobbyScreen(menu, (connection, hosting) -> {
+                BattleSetup setup = null;
+                if (hosting) {
+                    var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
+                    setup = BattleSetup.random(roster, new java.util.Random());
+                }
+                var controller = new NetworkBattleController(connection, setup);
+                sceneManager.show(new BattleScreen(sceneManager, controller, menu));
+            }));
         });
 
         combatButton.setOnAction(event -> {

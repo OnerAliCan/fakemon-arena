@@ -7,6 +7,7 @@ import fr.epitech.fakemon.core.api.BattleEndedEvent;
 import fr.epitech.fakemon.core.api.BattleEngine;
 import fr.epitech.fakemon.core.api.BattleEvent;
 import fr.epitech.fakemon.core.api.BattleListener;
+import fr.epitech.fakemon.core.api.BattleState;
 import fr.epitech.fakemon.core.api.CriticalHitEvent;
 import fr.epitech.fakemon.core.api.EffectivenessEvent;
 import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
@@ -26,6 +27,7 @@ import fr.epitech.fakemon.core.api.UseMove;
 import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
 import fr.epitech.fakemon.core.model.Fakemon;
 import javafx.animation.PauseTransition;
+import javafx.animation.Animation;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -47,7 +49,8 @@ import javafx.util.Duration;
 public final class BattleScreen extends BorderPane implements BattleListener {
     private enum View { ACTION, TEAM, REQUIRED, PAUSE, RESOLVING, FINISHED }
 
-    private final BattleEngine engine = new DefaultBattleEngine();
+    private final BattleEngine engine;
+    private final NetworkBattleController network;
     private final BattleSetup setup;
     private final SceneManager scenes;
     private final Runnable menu;
@@ -66,7 +69,17 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     private int turnsPlayed;
 
     BattleScreen(SceneManager scenes, BattleSetup setup, Runnable menu) {
+        this(scenes, setup, menu, null);
+    }
+
+    BattleScreen(SceneManager scenes, NetworkBattleController network, Runnable menu) {
+        this(scenes, null, menu, network);
+    }
+
+    private BattleScreen(SceneManager scenes, BattleSetup setup, Runnable menu, NetworkBattleController network) {
         this.setup = setup;
+        this.network = network;
+        engine = network == null ? new DefaultBattleEngine() : null;
         this.scenes = scenes;
         this.menu = menu;
         setPadding(new Insets(12));
@@ -103,26 +116,74 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             if (current == null) {
                 eventDelay.stop();
                 events.clear();
+                if (network != null) {
+                    network.close();
+                }
             } else {
                 requestFocus();
             }
         });
-        engine.addListener(this);
-        setup.start(engine);
-        renderNext();
+        if (network == null) {
+            engine.addListener(this);
+            setup.start(engine);
+            renderNext();
+        } else {
+            turnLabel.setText("Connexion au combat…");
+            network.start(this::onEvent, this::networkChoiceRequired, this::networkFailure);
+        }
+    }
+
+    private BattleState state() {
+        return network == null ? engine.getState() : network.getState();
+    }
+
+    private void networkChoiceRequired(boolean replacement) {
+        events.add(() -> {
+            if (replacement) {
+                showTeam(true);
+            } else {
+                ready();
+            }
+        });
+        scheduleNetworkEvents();
+    }
+
+    private void scheduleNetworkEvents() {
+        if (network != null && eventDelay.getStatus() != Animation.Status.RUNNING) {
+            eventDelay.playFromStart();
+        }
+    }
+
+    private void networkFailure(Throwable error) {
+        network.close();
+        eventDelay.stop();
+        events.clear();
+        setView(View.FINISHED);
+        Label message = new Label("Le combat en LAN a été interrompu. " + error.getMessage());
+        message.setWrapText(true);
+        Button back = new Button("Retour au menu principal");
+        back.setOnAction(event -> menu.run());
+        setCenter(new VBox(12, message, back));
+        setBottom(null);
     }
 
     private void submit(PlayerAction action) {
         if (view == View.RESOLVING || view == View.FINISHED) {
             return;
         }
-        if (view == View.ACTION || view == View.TEAM) {
-            turnsPlayed = engine.getState().getTurnNumber();
-        }
+        turnsPlayed = state().getTurnNumber();
         showArena();
         setView(View.RESOLVING);
-        engine.submitAction(action);
-        renderNext();
+        if (network == null) {
+            engine.submitAction(action);
+            renderNext();
+        } else {
+            try {
+                network.submitAction(action);
+            } catch (RuntimeException error) {
+                networkFailure(error);
+            }
+        }
     }
 
     private void renderNext() {
@@ -150,12 +211,14 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             Fakemon mon = entered.getFakemon();
             int hp = mon.getCurrentHp();
             events.add(() -> {
-                panel(entered.getSide()).show(mon, hp, setup.item(mon));
+                panel(entered.getSide()).show(mon, hp,
+                        mon.getItem() == null ? "Aucun" : mon.getItem().getDisplayName());
                 appendLog(name(mon) + " entre en jeu.");
             });
         } else {
             events.add(() -> render(event));
         }
+        scheduleNetworkEvents();
     }
 
     private void render(BattleEvent event) {
@@ -196,15 +259,30 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             showTeam(true);
         } else if (event instanceof BattleEndedEvent result) {
             setView(View.FINISHED);
-            scenes.show(new BattleEndScreen(result.getWinner(), result.getReason(), turnsPlayed, setup.player,
-                    () -> scenes.show(new BattleScreen(scenes, setup.rematch(), menu)), menu));
+            Runnable replay = network == null
+                    ? () -> scenes.show(new BattleScreen(scenes, setup.rematch(), menu)) : null;
+            scenes.show(new BattleEndScreen(result.getWinner(), result.getReason(), turnsPlayed,
+                    state().getTeam(Side.PLAYER), replay, menu));
         }
     }
 
     private void ready() {
+        if (network != null && !network.canChoose()) {
+            setView(View.RESOLVING);
+            turnLabel.setText(state() == null ? "Connexion au combat…"
+                    : "Tour " + state().getTurnNumber() + " — En attente de l'adversaire");
+            return;
+        }
+        if (network != null && network.needsReplacement()) {
+            showTeam(true);
+            return;
+        }
+        if (network != null) {
+            turnLabel.setText("Tour " + state().getTurnNumber());
+        }
         showArena();
         attacks.getChildren().clear();
-        var moves = engine.getState().getActiveFakemon(Side.PLAYER).getMoves();
+        var moves = state().getActiveFakemon(Side.PLAYER).getMoves();
         for (int index = 0; index < moves.size(); index++) {
             var move = moves.get(index);
             Button button = new Button(move.getName() + " — " + move.getType()
@@ -228,9 +306,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         if (!required && view != View.ACTION) {
             return;
         }
-        var state = engine.getState();
+        var state = state();
         setView(required ? View.REQUIRED : View.TEAM);
-        setCenter(new StackPane(new TeamPanel(setup.player.getFakemons(), state.getActiveFakemon(Side.PLAYER),
+        setCenter(new StackPane(new TeamPanel(state.getTeam(Side.PLAYER).getFakemons(), state.getActiveFakemon(Side.PLAYER),
                 required, this::submit, this::ready)));
         setBottom(null);
         requestFocus();
@@ -251,7 +329,8 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         view = next;
         attacks.setDisable(next != View.ACTION);
         pauseButton.setDisable(next != View.ACTION);
-        teamButton.setDisable(next != View.ACTION || setup.player.getStandingFakemons().size() < 2);
+        teamButton.setDisable(next != View.ACTION || state() == null
+                || state().getTeam(Side.PLAYER).getStandingFakemons().size() < 2);
     }
 
     private FighterPanel panel(Side side) {
