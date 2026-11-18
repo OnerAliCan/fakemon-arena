@@ -5,6 +5,9 @@ import fr.epitech.fakemon.core.model.Talent;
 
 /** Inflige 10 % des PV max à l'adversaire à l'entrée, en lui laissant au moins un PV. */
 public final class Fracas extends Ability {
+    /** Crée le talent Fracas. */
+    public Fracas() {}
+
     @Override
     public int entryDamage(Fakemon entrant, Fakemon target) {
         if (entrant.getSpecies().getTalent() != Talent.FRACAS || target == null || target.isFainted()) {

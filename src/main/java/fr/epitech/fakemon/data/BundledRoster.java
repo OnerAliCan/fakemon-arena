@@ -14,7 +14,10 @@ import fr.epitech.fakemon.core.model.Species;
 public final class BundledRoster {
     private BundledRoster() {}
 
-    /** Charge les espèces et résout leurs références vers les attaques du catalogue. */
+    /**
+     * Charge les espèces et résout leurs références vers les attaques du catalogue.
+     * @return le catalogue intégré au jeu
+     */
     public static SpeciesRepository load() {
         var stream = Objects.requireNonNull(BundledRoster.class.getResourceAsStream("/data/fakemons.json"));
         try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {

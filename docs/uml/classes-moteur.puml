@@ -9,9 +9,9 @@ skinparam packageStyle rectangle
 skinparam noteBackgroundColor #FFF8DC
 skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #555555
-title Fakemon Arena · moteur, générateur, IA et données (v1)\ncore.api existe déjà ; les autres classes sont à écrire, sauf InMemorySpeciesRepository.
+title Fakemon Arena · moteur, générateur, IA et données
 
-package "core.api (déjà écrit)" {
+package "core.api" {
   interface BattleEngine {
     + addListener(listener) : void
     + start(playerTeam, opponentTeam, battleMode, opponent, random) : void
@@ -50,12 +50,14 @@ package "core.engine" {
     --
     + TypeChart()
     + multiplier(attack : Type, defender : List<Type>) : double
-    + toEffectiveness(multiplier : double) : Effectiveness
+    + toEffectiveness(multiplier : double) : Optional<Effectiveness>
   }
 
   class DamageCalculator <<#9>> {
     - random : Random
     - typeChart : TypeChart
+    - carapace : Ability
+    - dernierSouffle : Ability
     --
     + DamageCalculator(random, typeChart)
     + rollAccuracy(move : Move) : boolean
@@ -75,6 +77,7 @@ package "core.engine" {
   }
 
   class TeamDrafter <<#10>> {
+    - {static} MINIMUM_SPECIES : int = 12
     - speciesRepository : SpeciesRepository
     - random : Random
     --
@@ -96,6 +99,8 @@ package "core.engine" {
     - turnNumber : int
     - phase : BattlePhase
     - typeChart : TypeChart
+    - fracas : Ability
+    - recuperation : Ability
     --
     + les 4 méthodes de BattleEngine
     + les 3 méthodes de BattleState
@@ -104,6 +109,12 @@ package "core.engine" {
     - useMove(side, move) : void
     - sendFakemon(side, fakemon) : void
     - checkCanEnter(side, fakemon) : void
+    - otherSide(side) : Side
+    - announceBothEntries(first) : void
+    - announceEntry(side) : void
+    - applyFracas(side) : void
+    - applyEndOfTurnTalents() : void
+    - applyRecovery(side, amount) : void
     - chooseOpponentReplacement() : Fakemon
     - applyEndOfTurn() : void
     - startNextTurn() : void
@@ -129,8 +140,11 @@ package "core.ai" {
 }
 
 package "data" {
-  class InMemorySpeciesRepository <<déjà écrit>> {
+  class InMemorySpeciesRepository {
     - speciesList : List<Species>
+    + InMemorySpeciesRepository()
+    + InMemorySpeciesRepository(species)
+    + les 3 méthodes de SpeciesRepository
   }
   class JsonSpeciesRepository <<#22>> {
     - speciesList : List<Species>
@@ -141,6 +155,8 @@ package "data" {
     + JsonSpeciesRepository(factory, userFolder)
     + les 3 méthodes de SpeciesRepository
     - load() : void
+    - readBuiltInFile() : JsonObject
+    - loadUserSpecies() : void
     - loadUserFile(file : Path) : void
     - validateSpecies(species : Species) : void
   }
@@ -148,6 +164,14 @@ package "data" {
     + createSpecies(json, movesById) : Species
     + createMove(json) : Move
   }
+  class BundledRoster {
+    - BundledRoster()
+    + {static} load() : SpeciesRepository
+  }
+}
+
+package "core.effects" {
+  abstract class Ability
 }
 
 package "ui (Matteo)" {
@@ -164,7 +188,9 @@ DefaultBattleEngine --> "1" BattlePhase
 DefaultBattleEngine ..> BattleEvent : envoie
 DefaultBattleEngine ..> PlayerAction : reçoit
 
-DamageCalculator *--> "1" TypeChart
+DamageCalculator --> "1" TypeChart
+DamageCalculator --> "2" Ability : modifie les dégâts
+DefaultBattleEngine --> "2" Ability : entrée et fin de tour
 DamageCalculator ..> DamageResult : renvoie
 TypeChart ..> Effectiveness
 
@@ -176,7 +202,9 @@ RandomOpponent ..> PlayerAction : renvoie
 
 InMemorySpeciesRepository ..|> SpeciesRepository
 JsonSpeciesRepository ..|> SpeciesRepository
-JsonSpeciesRepository *--> "1" SpeciesFactory
+JsonSpeciesRepository --> "1" SpeciesFactory
+BundledRoster ..> SpeciesFactory : reconstruit le catalogue intégré
+BundledRoster ..> InMemorySpeciesRepository : renvoie
 
 CombatScreen ..|> BattleListener
 CombatScreen --> BattleEngine : submitAction
@@ -187,5 +215,7 @@ legend bottom left
   <b>Factory (SpeciesFactory)</b> : crée les espèces et les attaques à partir du JSON, comme au jour 08.
   <b>Random</b> : le même sert à tous les tirages, pour qu'une graine fixée rende les tests reproductibles.
   <b>BattlePhase</b> : submitAction lève IllegalStateException si l'action ne correspond pas à la phase.
+  <b>TypeChart</b> renvoie Optional.empty() pour une efficacité normale de ×1.
+  <b>Catalogue JSON</b> charge le roster intégré et les fichiers utilisateur. add valide la fiche et copie les médias avant la sauvegarde.
 endlegend
 @enduml

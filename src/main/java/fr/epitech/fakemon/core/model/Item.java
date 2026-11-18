@@ -4,8 +4,11 @@ import fr.epitech.fakemon.core.effects.ItemStats;
 
 /** Objet tenu qui bonifie certaines statistiques du porteur. */
 public enum Item {
+    /** Augmente de 20 % l'attaque physique et l'attaque spéciale. */
     GANTELET("Gantelet", 1.2, 1.0, 1.0),
+    /** Augmente de 20 % la défense physique et la défense spéciale. */
     ECU("Écu", 1.0, 1.2, 1.0),
+    /** Augmente de 20 % la vitesse. */
     PLUME("Plume", 1.0, 1.0, 1.2);
 
     private final String displayName;
@@ -20,7 +23,10 @@ public enum Item {
         this.speed = speed;
     }
 
-    /** @return le nom affiché au joueur */
+    /**
+     * Donne le nom affiché au joueur.
+     * @return le nom affiché au joueur
+     */
     public String getDisplayName() {
         return displayName;
     }

@@ -13,6 +13,7 @@ public class Team {
     /**
      * Crée une équipe.
      *
+     * @param fakemons les membres de l'équipe, dans leur ordre de sélection
      * @throws IllegalArgumentException si la liste contient plus de 6 Fakemon
      */
     public Team(List<Fakemon> fakemons) {
@@ -25,11 +26,18 @@ public class Team {
         }
     }
 
+    /**
+     * Donne les membres dans leur ordre de sélection.
+     * @return la liste des Fakemon de l'équipe
+     */
     public List<Fakemon> getFakemons() {
         return this.fakemons;
     }
 
-    /** Renvoie une nouvelle liste des Fakemon qui ne sont pas K.O. ; l'équipe ne change pas. */
+    /**
+     * Donne une nouvelle liste des membres encore debout.
+     * @return les Fakemon dont les PV sont strictement positifs
+     */
     public List<Fakemon> getStandingFakemons() {
         List<Fakemon> standingFakemons = new ArrayList<>();
 
@@ -41,6 +49,10 @@ public class Team {
         return standingFakemons;
     }
 
+    /**
+     * Indique si l'équipe peut poursuivre le combat.
+     * @return true si au moins un membre a encore des PV
+     */
     public boolean hasStandingFakemon() {
         if (this.getStandingFakemons().size() == 0) {
             return false;

@@ -14,6 +14,13 @@ public class DamageResult {
     private final Talent attackerTalent;
     private final Talent defenderTalent;
 
+    /**
+     * Crée un résultat sans activation de talent.
+     *
+     * @param damage les dégâts calculés
+     * @param critical indique si le coup est critique
+     * @param multiplier le multiplicateur d'efficacité des types
+     */
     public DamageResult(int damage, boolean critical, double multiplier) {
         this(damage, critical, multiplier, null, null);
     }
@@ -36,24 +43,42 @@ public class DamageResult {
         this.multiplier = multiplier;
     }
 
-    /** @return le talent active par l'attaquant, ou null */
+    /**
+     * Donne le talent active par l'attaquant, ou null.
+     * @return le talent active par l'attaquant, ou null
+     */
     public Talent getAttackerTalent() {
         return attackerTalent;
     }
 
-    /** @return le talent active par le defenseur, ou null */
+    /**
+     * Donne le talent active par le defenseur, ou null.
+     * @return le talent active par le defenseur, ou null
+     */
     public Talent getDefenderTalent() {
         return defenderTalent;
     }
 
+    /**
+     * Donne les dégâts calculés avant leur application à la cible.
+     * @return les points de dégâts
+     */
     public int getDamage() {
         return this.damage;
     }
 
+    /**
+     * Indique si le calcul a produit un coup critique.
+     * @return true si le coup est critique
+     */
     public boolean isCritical() {
         return this.critical;
     }
 
+    /**
+     * Donne l'efficacité des types de l'attaque contre la cible.
+     * @return le multiplicateur de la table des types
+     */
     public double getMultiplier() {
         return this.multiplier;
     }

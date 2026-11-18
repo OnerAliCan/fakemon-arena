@@ -10,10 +10,18 @@ public class SendFakemon extends PlayerAction {
 
     private final Fakemon fakemon;
 
+    /**
+     * Prépare l'envoi d'un Fakemon sur le terrain.
+     * @param fakemon le membre de l'équipe choisi par le joueur
+     */
     public SendFakemon(Fakemon fakemon) {
         this.fakemon = fakemon;
     }
 
+    /**
+     * Donne le Fakemon choisi.
+     * @return le Fakemon à envoyer
+     */
     public Fakemon getFakemon() {
         return this.fakemon;
     }

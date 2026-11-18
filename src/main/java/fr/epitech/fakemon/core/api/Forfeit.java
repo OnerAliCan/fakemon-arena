@@ -3,4 +3,7 @@ package fr.epitech.fakemon.core.api;
 /**
  * Le joueur abandonne le combat.
  */
-public class Forfeit extends PlayerAction {}
+public class Forfeit extends PlayerAction {
+    /** Crée une décision d'abandonner le combat. */
+    public Forfeit() {}
+}

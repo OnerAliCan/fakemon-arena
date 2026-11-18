@@ -5,6 +5,9 @@ import fr.epitech.fakemon.core.model.Talent;
 
 /** Rend jusqu'à 10 % des PV max au porteur en fin de tour. */
 public final class Recuperation extends Ability {
+    /** Crée le talent Récupération. */
+    public Recuperation() {}
+
     @Override
     public int endOfTurnHeal(Fakemon holder) {
         if (holder.isFainted() || holder.getSpecies().getTalent() != Talent.RECUPERATION) {

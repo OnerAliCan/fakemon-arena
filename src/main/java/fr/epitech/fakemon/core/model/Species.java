@@ -40,67 +40,106 @@ public class Species {
         this.cry = builder.cry;
     }
 
-    /** @return le nom d'origine utilisé dans le catalogue */
+    /**
+     * Donne le nom d'origine utilisé dans le catalogue.
+     * @return le nom d'origine utilisé dans le catalogue
+     */
     public String getOriginalName() {
         return this.originalName;
     }
 
-    /** @return le nom français affiché au joueur */
+    /**
+     * Donne le nom français affiché au joueur.
+     * @return le nom français affiché au joueur
+     */
     public String getFrenchName() {
         return this.frenchName;
     }
 
-    /** @return les types du Fakemon */
+    /**
+     * Donne les types du Fakemon.
+     * @return les types du Fakemon
+     */
     public List<Type> getTypes() {
         return this.types;
     }
 
-    /** @return les statistiques de base */
+    /**
+     * Donne les statistiques de base.
+     * @return les statistiques de base
+     */
     public Stats getStats() {
         return this.stats;
     }
 
-    /** @return les attaques que le Fakemon peut apprendre */
+    /**
+     * Donne les attaques que le Fakemon peut apprendre.
+     * @return les attaques que le Fakemon peut apprendre
+     */
     public List<Move> getPossibleMoves() {
         return this.possibleMoves;
     }
 
-    /** @return le numéro du Fakemon dans le Mondex */
+    /**
+     * Donne le numéro du Fakemon dans le Mondex.
+     * @return le numéro du Fakemon dans le Mondex
+     */
     public int getDexNumber() {
         return this.dexNumber;
     }
 
-    /** @return le talent du Fakemon */
+    /**
+     * Donne le talent du Fakemon.
+     * @return le talent du Fakemon
+     */
     public Talent getTalent() {
         return this.talent;
     }
 
-    /** Le type d'attaque de couverture, ou {@code null} s'il n'y en a pas. */
+    /**
+     * Donne le type d'attaque de couverture.
+     * @return le type de couverture, ou {@code null} s'il n'y en a pas
+     */
     public Type getCoverageType() {
         return this.coverageType;
     }
 
-    /** Le concept du Fakemon, ou {@code null} s'il n'est pas renseigné. */
+    /**
+     * Donne le concept du Fakemon.
+     * @return le concept, ou {@code null} s'il n'est pas renseigné
+     */
     public String getConcept() {
         return this.concept;
     }
 
-    /** Le designer du Fakemon, ou {@code null} s'il n'est pas renseigné. */
+    /**
+     * Donne le designer du Fakemon.
+     * @return le designer, ou {@code null} s'il n'est pas renseigné
+     */
     public String getDesigner() {
         return this.designer;
     }
 
-    /** @return le chemin du sprite de face */
+    /**
+     * Donne le chemin du sprite de face.
+     * @return le chemin du sprite de face
+     */
     public String getFrontSprite() {
         return this.frontSprite;
     }
 
-    /** @return le chemin du sprite de dos */
+    /**
+     * Donne le chemin du sprite de dos.
+     * @return le chemin du sprite de dos
+     */
     public String getBackSprite() {
         return this.backSprite;
     }
 
-    /** Le chemin du cri, ou {@code null} s'il n'y en a pas encore. */
+    /**
+     * Donne le chemin du cri.
+     * @return le chemin du fichier audio, ou {@code null} s'il n'y en a pas encore
+     */
     public String getCry() {
         return this.cry;
     }
@@ -111,6 +150,9 @@ public class Species {
      * Chaque méthode renvoie le Builder lui-même, pour enchaîner les appels.
      */
     public static class Builder {
+        /** Prépare une fiche dont les informations seront vérifiées à la construction. */
+        public Builder() {}
+
 
         private String originalName;
         private String frenchName;

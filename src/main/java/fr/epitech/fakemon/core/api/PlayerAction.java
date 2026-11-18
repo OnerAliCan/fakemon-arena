@@ -5,5 +5,6 @@ package fr.epitech.fakemon.core.api;
  */
 public abstract class PlayerAction {
 
+    /** Initialise une décision du joueur depuis une sous-classe. */
     protected PlayerAction() {}
 }

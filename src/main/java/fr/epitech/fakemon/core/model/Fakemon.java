@@ -16,6 +16,8 @@ public class Fakemon {
     /**
      * Crée un Fakemon avec tous ses PV.
      *
+     * @param species la fiche de son espèce
+     * @param moves ses quatre attaques de combat
      * @throws IllegalArgumentException si la liste ne contient pas exactement 4 attaques
      */
     public Fakemon(Species species, List<Move> moves) {
@@ -29,23 +31,42 @@ public class Fakemon {
         this.currentHp = species.getStats().getHp();
     }
 
+    /**
+     * Donne l'espèce du Fakemon.
+     * @return sa fiche du catalogue
+     */
     public Species getSpecies() {
         return this.species;
     }
 
+    /**
+     * Donne les attaques choisies pour le combat.
+     * @return les quatre attaques du Fakemon
+     */
     public List<Move> getMoves() {
         return this.moves;
     }
 
+    /**
+     * Donne les points de vie restants.
+     * @return les PV actuels
+     */
     public int getCurrentHp() {
         return this.currentHp;
     }
 
+    /**
+     * Donne les statistiques de combat avec les bonus de l'objet tenu.
+     * @return les statistiques de base ou leur vue décorée par l'objet
+     */
     public Stats getStats() {
         return battleStats == null ? species.getStats() : battleStats;
     }
 
-    /** @return l'objet tenu, ou null si le Fakemon n'en a pas */
+    /**
+     * Donne l'objet tenu, ou null si le Fakemon n'en a pas.
+     * @return l'objet tenu, ou null si le Fakemon n'en a pas
+     */
     public Item getItem() {
         return item;
     }
@@ -60,10 +81,18 @@ public class Fakemon {
         battleStats = item == null ? null : item.decorate(species.getStats());
     }
 
+    /**
+     * Donne le maximum de points de vie défini par l'espèce.
+     * @return les PV maximum
+     */
     public int getMaxHp() {
         return species.getStats().getHp();
     }
 
+    /**
+     * Indique si le Fakemon est K.O.
+     * @return true si ses PV sont nuls
+     */
     public boolean isFainted() {
         if (this.currentHp > 0) {
             return false;
@@ -71,12 +100,18 @@ public class Fakemon {
         return true;
     }
 
-    /** Retire des PV, sans descendre sous 0. */
+    /**
+     * Retire des PV, sans descendre sous 0.
+     * @param damageTaken les dégâts à retirer
+     */
     public void takeDamage(int damageTaken) {
         currentHp = Math.max(currentHp - damageTaken, 0);
     }
 
-    /** Rend des PV, sans dépasser le maximum. */
+    /**
+     * Rend des PV, sans dépasser le maximum.
+     * @param healedHp les PV à rendre
+     */
     public void heal(int healedHp) {
         currentHp = Math.min(currentHp + healedHp, getMaxHp());
     }

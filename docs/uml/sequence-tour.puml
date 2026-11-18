@@ -9,68 +9,111 @@ skinparam sequence {
   LifeLineBorderColor #888888
   GroupBackgroundColor #F2F2F2
 }
-title Fakemon Arena · séquence d'un tour (v1)\nDu clic du joueur à l'affichage, cas d'une attaque contre l'IA
+title Fakemon Arena · résolution d'un tour contre l'IA
 
-actor "Joueur" as Joueur
-participant "Écran de combat\n(BattleListener)" as Ecran #FFF6D6
-participant "DefaultBattleEngine\n(l'arbitre)" as Arbitre #DCE8F7
-participant "RandomOpponent\n(Opponent)" as IA #DCE8F7
+actor Joueur
+participant "BattleScreen" as Ecran #FFF6D6
+participant "DefaultBattleEngine" as Arbitre #DCE8F7
+participant "RandomOpponent" as IA #DCE8F7
 participant "DamageCalculator" as Calcul #DCE8F7
 participant "Fakemon cible" as Cible #DCE8F7
 
-Joueur -> Ecran : clique sur une attaque
-Ecran -> Ecran : bloque les boutons
-Ecran -> Arbitre : submitAction(new UseMove(move))
+Joueur -> Ecran : attaque ou changement
+Ecran -> Ecran : verrouiller les commandes
+Ecran -> Arbitre : submitAction(playerAction)
 activate Arbitre
-Arbitre -> IA : chooseAction(moveList, standingFakemonList)
-IA --> Arbitre : PlayerAction
-Arbitre -> Arbitre : classe les actions : changements d'abord,\npuis priorité, Vitesse, pile ou face
+Arbitre -> IA : chooseAction(moves, standingFakemons)
+IA --> Arbitre : opponentAction
+Arbitre -> Arbitre : changements avant les attaques
+opt un ou deux changements
+  Arbitre -> Arbitre : vérifier les remplaçants
+  Arbitre -> Arbitre : si deux changements, départ du plus rapide
+  Arbitre -> Ecran : FakemonEnteredEvent
+  opt le Fakemon entrant tient un objet
+    Arbitre -> Ecran : ItemActivatedEvent
+  end
+  opt Fracas inflige des dégâts à l'entrée
+    Arbitre -> Cible : takeDamage(entryDamage)
+    Arbitre -> Ecran : TalentActivatedEvent
+    Arbitre -> Ecran : HpLostEvent
+  end
+end
+Arbitre -> Arbitre : attaques par priorité, puis vitesse, puis hasard
 
-loop pour chaque action, si le mon qui agit n'est pas KO
-  Arbitre -> Ecran : onEvent(MoveUsedEvent)
+loop chaque attaque autorisée, avec un attaquant encore debout
+  Arbitre -> Ecran : MoveUsedEvent
   Arbitre -> Calcul : rollAccuracy(move)
   Calcul --> Arbitre : touché ou raté
   alt attaque ratée
-    Arbitre -> Ecran : onEvent(MoveMissedEvent)
+    Arbitre -> Ecran : MoveMissedEvent
   else attaque réussie
     Arbitre -> Calcul : calculate(attacker, target, move)
+    note right of Calcul
+      Utilise les statistiques avec l'objet tenu.
+      Applique Dernier Souffle et Carapace.
+    end note
     Calcul --> Arbitre : DamageResult
-    Arbitre -> Cible : takeDamage(damage)
-    Arbitre -> Ecran : onEvent(CriticalHitEvent), si critique
-    Arbitre -> Ecran : onEvent(EffectivenessEvent), si l'efficacité n'est pas neutre
-    Arbitre -> Ecran : onEvent(HpLostEvent)
-    opt la cible n'a plus de PV
-      Arbitre -> Ecran : onEvent(FakemonFaintedEvent)
+    alt cible immunisée
+      Arbitre -> Ecran : EffectivenessEvent(NO_EFFECT)
+    else cible sensible à l'attaque
+      Arbitre -> Cible : takeDamage(damage)
+      opt coup critique
+        Arbitre -> Ecran : CriticalHitEvent
+      end
+      opt efficacité différente de ×1
+        Arbitre -> Ecran : EffectivenessEvent
+      end
+      opt Dernier Souffle activé
+        Arbitre -> Ecran : TalentActivatedEvent pour l'attaquant
+      end
+      opt Carapace activée
+        Arbitre -> Ecran : TalentActivatedEvent pour la cible
+      end
+      Arbitre -> Ecran : HpLostEvent
+      opt la cible est K.O.
+        Arbitre -> Ecran : FakemonFaintedEvent
+      end
     end
   end
 end
 
-Arbitre -> Arbitre : fin de tour : talents de fin de tour\n(HpRestoredEvent, TalentActivatedEvent)
+opt Récupération rend des PV
+  Arbitre -> Arbitre : si deux soins, traiter le plus rapide d'abord
+  Arbitre -> Ecran : TalentActivatedEvent
+  Arbitre -> Ecran : HpRestoredEvent
+end
 
-alt un camp n'a plus de mon debout
-  Arbitre -> Ecran : onEvent(BattleEndedEvent)
-else le mon de l'IA est KO
-  Arbitre -> IA : chooseFakemon(standingFakemonList)
+alt le joueur n'a plus de Fakemon debout
+  Arbitre -> Ecran : BattleEndedEvent(OPPONENT, ALL_FAINTED)
+else l'IA n'a plus de Fakemon debout
+  Arbitre -> Ecran : BattleEndedEvent(PLAYER, ALL_FAINTED)
+else le Fakemon actif du joueur est K.O.
+  Arbitre -> Ecran : FakemonSelectionRequiredEvent(REPLACEMENT)
+  note right of Ecran
+    Le moteur attend SendFakemon.
+    Si le Fakemon adverse est K.O. aussi,
+    son remplaçant est demandé à ce moment.
+    Les deux entrées sont alors annoncées,
+    puis le tour suivant commence.
+  end note
+else seul le Fakemon actif adverse est K.O.
+  Arbitre -> IA : chooseFakemon(standingFakemons)
   IA --> Arbitre : SendFakemon
-  Arbitre -> Ecran : onEvent(FakemonEnteredEvent)
-  Arbitre -> Ecran : onEvent(TurnStartedEvent)
-else le mon du joueur est KO
-  Arbitre -> Ecran : onEvent(FakemonSelectionRequiredEvent)
-  note right of Ecran : l'arbitre attend SendFakemon,\npuis envoie FakemonEnteredEvent\net TurnStartedEvent
-else les deux mons sont debout
-  Arbitre -> Ecran : onEvent(TurnStartedEvent)
+  Arbitre -> Arbitre : entrée du remplaçant, objet et Fracas éventuels
+  Arbitre -> Ecran : événements d'entrée
+  Arbitre -> Ecran : TurnStartedEvent
+else les deux Fakemon actifs sont debout
+  Arbitre -> Ecran : TurnStartedEvent
 end
 Arbitre --> Ecran : fin de submitAction
 deactivate Arbitre
-
-Ecran -> Ecran : affiche les events un par un :\njournal, animations, barres de PV
-Ecran -> Ecran : réactive les boutons
-Ecran --> Joueur : le tour suivant peut commencer
+Ecran -> Ecran : afficher les événements dans l'ordre
+Ecran --> Joueur : prochain choix ou bilan du combat
 
 legend bottom left
-  <b>Sans thread :</b> les events arrivent pendant submitAction. L'écran les met en file et les affiche ensuite, à son rythme.
-  <b>Règle du contrat :</b> l'arbitre envoie des faits, l'écran rédige les phrases.
-  <b>Changement de mon :</b> même chemin avec SendFakemon, qui passe avant les attaques et envoie FakemonEnteredEvent.
-  <b>Talents et objets (#24) :</b> ils s'ajoutent à ce schéma, à l'entrée en jeu et dans le calcul des dégâts.
+  Ce parcours décrit le combat contre l'IA sur le thread JavaFX.
+  Les événements sont mis en file par l'écran pendant submitAction.
+  Un abandon en attente d'action émet BattleEndedEvent(OPPONENT, FORFEIT).
+  Les changements simultanés sont appliqués successivement dans l'ordre de vitesse.
 endlegend
 @enduml
