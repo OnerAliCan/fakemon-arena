@@ -1,0 +1,53 @@
+@startuml classes-mondex
+!pragma layout smetana
+skinparam dpi 110
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+hide empty members
+title Fakemon Arena · classes du Mondex
+interface SpeciesRepository {
+  + findAll() : List<Species>
+}
+class Species
+class MainMenu
+class SceneManager {
+  + show(screen)
+  ~ effectsVolumePercent() : ReadOnlyDoubleProperty
+}
+class VolumeSettings
+class MondexScreen {
+  - list : ListView<Species>
+  - showingDetails : boolean
+  - effectsVolumePercent : ReadOnlyDoubleProperty
+  - showDetails(species)
+  - goBack()
+}
+class SpeciesDetailsPane {
+  - player : MediaPlayer
+  - effectsVolumePercent : ReadOnlyDoubleProperty
+  - playCry(path)
+  - audioFailed(candidate)
+  - stopCry()
+}
+class BattleAssets {
+  ~ {static} sprite(species, back, size) : ImageView
+  ~ {static} source(path) : String
+}
+class MediaPlayer
+MainMenu ..> MondexScreen : ouvre
+MainMenu --> SceneManager : navigation et volume
+SceneManager *-- VolumeSettings
+MondexScreen ..> SpeciesRepository : charge et trie le catalogue
+MondexScreen --> Species : sélection
+MondexScreen *-- SpeciesDetailsPane : fiche sélectionnée
+SpeciesDetailsPane --> Species : informations de base
+SpeciesDetailsPane *-- "0..1" MediaPlayer : lecture à la demande
+MondexScreen ..> BattleAssets : sprites de la liste
+SpeciesDetailsPane ..> BattleAssets : sprite et source du cri
+SpeciesDetailsPane ..> VolumeSettings : volume partagé en lecture seule
+note bottom of SpeciesDetailsPane
+  La lecture suit le volume des effets sonores.
+  Le lecteur est libéré en quittant la fiche.
+  Une nouvelle lecture libère la précédente.
+end note
+@enduml

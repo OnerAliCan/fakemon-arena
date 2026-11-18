@@ -21,6 +21,7 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 | Navigation : combat en ligne (bonus) | [combat-en-ligne.puml](combat-en-ligne.puml) | #5 |
 | Navigation : écran de combat | [combat.puml](combat.puml) | #5 |
 | Navigation : Mondex | [mondex.puml](mondex.puml) | #5 |
+| Classes du Mondex | [classes-mondex.puml](classes-mondex.puml) | #45 |
 | Navigation : Ajouter un Mon | [ajouter-un-mon.puml](ajouter-un-mon.puml) | #5 |
 
 ![Architecture, vue d'ensemble](architecture.png)
@@ -56,6 +57,8 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 ![Écran de combat](combat.png)
 
 ![Mondex](mondex.png)
+
+![Classes du Mondex](classes-mondex.png)
 
 ![Ajouter un Mon](ajouter-un-mon.png)
 

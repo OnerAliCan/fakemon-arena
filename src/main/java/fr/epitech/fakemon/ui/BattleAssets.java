@@ -32,9 +32,13 @@ final class BattleAssets {
         if (path == null || path.isBlank()) {
             return null;
         }
-        var resource = BattleAssets.class.getResource(path.startsWith("/") ? path : "/" + path);
-        Image image = new Image(resource != null ? resource.toExternalForm()
-                : userFolder().resolve(path).toUri().toString());
+        Image image = new Image(source(path));
         return image.isError() ? null : image;
+    }
+
+    /** Résout un média intégré au jeu ou enregistré dans le dossier utilisateur. */
+    static String source(String path) {
+        var resource = BattleAssets.class.getResource(path.startsWith("/") ? path : "/" + path);
+        return resource != null ? resource.toExternalForm() : userFolder().resolve(path).toUri().toString();
     }
 }
