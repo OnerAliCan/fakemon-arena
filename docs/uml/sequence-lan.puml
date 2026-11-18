@@ -2,13 +2,12 @@
 skinparam dpi 110
 skinparam shadowing false
 skinparam defaultFontName "Segoe UI"
-title Fakemon Arena · tour en LAN
+title Fakemon Arena · choix simultanés en LAN
 actor Hôte
 participant "BattleScreen hôte" as HostUI
 participant "NetworkBattleController hôte" as HostController
 participant "NetworkBattleCoordinator" as Coordinator
 participant "DefaultBattleEngine" as Engine
-participant "NetworkOpponentChannel" as Opponent
 participant "NetworkGuestSession" as Guest
 participant "NetworkBattleController invité" as GuestController
 participant "BattleScreen invité" as GuestUI
@@ -17,39 +16,78 @@ actor Invité
 Coordinator -> Guest : BATTLE_START avec les deux équipes
 Coordinator -> HostController : BATTLE_START
 Guest -> GuestController : BATTLE_START
-HostController -> HostController : Platform.runLater
-GuestController -> GuestController : Platform.runLater
-Coordinator -> HostController : ACTION_REQUIRED, requestId
-HostController -> HostUI : activer le choix
-Hôte -> HostUI : attaque ou changement
-HostUI -> HostController : PlayerAction
-HostController -> Coordinator : ACTION avec requestId
-Coordinator -> Engine : submitAction, thread moteur
-Engine -> Opponent : chooseAction
-Opponent -> Guest : ACTION_REQUIRED, requestId
+Coordinator -> HostController : ACTION_REQUIRED, requestId hôte
+Coordinator -> Guest : ACTION_REQUIRED, requestId invité
 Guest -> GuestController : demande reçue
+HostController -> HostUI : activer le choix sur JavaFX
 GuestController -> GuestUI : activer le choix sur JavaFX
-Invité -> GuestUI : attaque ou changement
-GuestUI -> GuestController : PlayerAction
-GuestController -> Guest : ACTION avec requestId
-Guest -> Coordinator : ligne JSON, lecteur réseau de l'hôte
-Coordinator -> Opponent : receiveAction
-Opponent --> Engine : action de l'invité
-Engine -> Engine : résoudre les actions
+
+par choix de l'hôte
+  Hôte -> HostUI : attaque ou changement
+  HostUI -> HostController : PlayerAction
+  HostController -> Coordinator : ACTION, requestId
+  Coordinator -> HostController : CHOICE_STATE(WAITING)
+  HostController -> HostUI : proposer Annuler mon choix
+  opt l'hôte annule avant réception du choix adverse
+    HostUI -> HostController : annuler
+    HostController -> Coordinator : cancelHostAction(requestId)
+    Coordinator -> HostController : CHOICE_STATE(CANCELLED)
+    HostController -> HostUI : réactiver les choix
+    Hôte -> HostUI : nouvelle action
+    HostController -> Coordinator : ACTION, requestId
+  end
+else choix de l'invité
+  Invité -> GuestUI : attaque ou changement
+  GuestUI -> GuestController : PlayerAction
+  GuestController -> Guest : ACTION, requestId
+  Guest -> Coordinator : message JSON
+  Coordinator -> Guest : CHOICE_STATE(WAITING)
+  Guest -> GuestController : confirmation
+  GuestController -> GuestUI : proposer Annuler mon choix
+  opt l'invité annule avant réception du choix adverse
+    GuestUI -> GuestController : annuler
+    GuestController -> Guest : CANCEL_ACTION, requestId
+    Guest -> Coordinator : demande d'annulation
+    Coordinator -> Guest : CHOICE_STATE(CANCELLED)
+    Guest -> GuestController : confirmation
+    GuestController -> GuestUI : réactiver les choix
+    Invité -> GuestUI : nouvelle action
+    GuestController -> Guest : ACTION, requestId
+    Guest -> Coordinator : nouveau choix
+  end
+end
+
+note over Coordinator
+  Les commandes sont traitées dans l'ordre de réception.
+  Dès que les deux choix sont reçus, ils sont verrouillés.
+  Une annulation tardive reçoit CHOICE_STATE(LOCKED).
+  Les identifiants empêchent de modifier un ancien tour.
+end note
+
+Coordinator -> HostController : CHOICE_STATE(LOCKED)
+Coordinator -> Guest : CHOICE_STATE(LOCKED)
+Guest -> GuestController : choix verrouillé
+Coordinator -> Engine : submitAction, thread moteur
+Engine -> Coordinator : Opponent.chooseAction
+Coordinator --> Engine : choix de l'invité déjà reçu
+Engine -> Engine : résoudre les deux actions selon les règles
 loop événements du tour
   Engine -> Coordinator : BattleEvent
   Coordinator -> HostController : EVENT
   Coordinator -> Guest : EVENT
   Guest -> GuestController : EVENT
-  HostController -> HostUI : état mis à jour et événement sur JavaFX
-  GuestController -> GuestUI : état mis à jour, camps adaptés, événement sur JavaFX
+  HostController -> HostUI : état et événement sur JavaFX
+  GuestController -> GuestUI : état et événement sur JavaFX
 end
+note over Coordinator, Guest
+  Un remplacement obligatoire est demandé au camp concerné.
+  Le moteur reprend après réception d'un remplaçant valide.
+end note
 alt combat terminé
   HostUI -> Hôte : bilan
   GuestUI -> Invité : bilan
-  Coordinator -> Coordinator : fermer la session
-  Guest -> Guest : fermer la session
-else choix suivant
+else nouveau tour
   Coordinator -> HostController : ACTION_REQUIRED
+  Coordinator -> Guest : ACTION_REQUIRED
 end
 @enduml

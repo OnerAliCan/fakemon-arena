@@ -30,7 +30,8 @@ LobbyGuest --> ControllerGuest : connexion ouverte
 ScreenHost --> ControllerHost : choix du joueur
 ControllerHost --> Coordinator : submitHostAction
 Coordinator --> Engine : start, submitAction
-Engine --> Channel : chooseAction, chooseFakemon
+Engine --> Coordinator : Opponent renvoie le choix reçu
+Engine --> Channel : remplacement via chooseFakemon
 Channel --> Opponent : attend le choix distant
 Coordinator --> Channel : réponse lue sur le réseau
 Channel --> ConnectionHost : ACTION_REQUIRED
@@ -50,6 +51,8 @@ note bottom of Coordinator
   Un thread résout le combat.
   Un autre lit les actions de l'invité.
   Les demandes portent un identifiant.
+  Les deux joueurs choisissent en parallèle.
+  Un choix peut être annulé avant celui de l'adversaire.
 end note
 note bottom of ControllerGuest
   Platform.runLater applique les messages sur JavaFX.

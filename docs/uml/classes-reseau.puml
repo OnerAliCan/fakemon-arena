@@ -56,11 +56,13 @@ class NetworkOpponentChannel {
 class NetworkBattleCoordinator {
   + start()
   + submitHostAction(message) : CompletableFuture<Void>
+  + cancelHostAction(requestId) : CompletableFuture<Boolean>
   + close()
 }
 class NetworkGuestSession {
   + start()
   + submitAction(message) : CompletableFuture<Void>
+  + cancelAction(requestId) : CompletableFuture<Void>
   + close()
 }
 class NetworkBattleState {
