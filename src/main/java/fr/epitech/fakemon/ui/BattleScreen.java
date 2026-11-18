@@ -61,6 +61,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     private final TextArea battleLog = new TextArea();
     private final Button pauseButton = new Button("Pause");
     private final Button teamButton = new Button("Équipe");
+    private final Button cancelChoice = new Button("Annuler mon choix");
     private final Label turnLabel = new Label();
     private final HBox controls;
     private final FighterPanel player = new FighterPanel(true);
@@ -86,7 +87,10 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         setFocusTraversable(true);
         pauseButton.setOnAction(event -> pause());
         teamButton.setOnAction(event -> showTeam(false));
-        setTop(new HBox(16, pauseButton, teamButton, turnLabel));
+        cancelChoice.setVisible(false);
+        cancelChoice.setManaged(false);
+        cancelChoice.setOnAction(event -> network.cancelAction());
+        setTop(new HBox(16, pauseButton, teamButton, turnLabel, cancelChoice));
         StackPane.setAlignment(player, Pos.BOTTOM_LEFT);
         StackPane.setAlignment(opponent, Pos.TOP_RIGHT);
         arena.getChildren().addAll(player, opponent);
@@ -129,12 +133,22 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             renderNext();
         } else {
             turnLabel.setText("Connexion au combat…");
-            network.start(this::onEvent, this::networkChoiceRequired, this::networkFailure);
+            network.start(this::onEvent, this::networkChoiceRequired, this::networkChoiceStateChanged,
+                    this::networkFailure);
         }
     }
 
     private BattleState state() {
         return network == null ? engine.getState() : network.getState();
+    }
+
+    private void networkChoiceStateChanged() {
+        boolean allowed = network.canCancel() && view != View.FINISHED;
+        cancelChoice.setVisible(allowed);
+        cancelChoice.setManaged(allowed);
+        if (network.canChoose()) {
+            networkChoiceRequired(network.needsReplacement());
+        }
     }
 
     private void networkChoiceRequired(boolean replacement) {
@@ -331,6 +345,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         pauseButton.setDisable(next != View.ACTION);
         teamButton.setDisable(next != View.ACTION || state() == null
                 || state().getTeam(Side.PLAYER).getStandingFakemons().size() < 2);
+        boolean cancelAllowed = network != null && network.canCancel() && next == View.RESOLVING;
+        cancelChoice.setVisible(cancelAllowed);
+        cancelChoice.setManaged(cancelAllowed);
     }
 
     private FighterPanel panel(Side side) {

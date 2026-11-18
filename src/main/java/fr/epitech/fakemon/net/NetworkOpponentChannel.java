@@ -14,6 +14,8 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
+import java.util.function.LongSupplier;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Relie les demandes du moteur aux réponses reçues par le lecteur réseau de l'hôte. */
 public final class NetworkOpponentChannel implements Opponent, AutoCloseable {
@@ -23,7 +25,7 @@ public final class NetworkOpponentChannel implements Opponent, AutoCloseable {
     private final Runnable onForfeit;
     private final NetworkOpponent opponent;
     private final NetworkActionCodec actions = new NetworkActionCodec();
-    private long requestNumber;
+    private final LongSupplier nextRequest;
     private long pendingRequest;
     private Fakemon requestedActive;
     private boolean closed;
@@ -38,10 +40,25 @@ public final class NetworkOpponentChannel implements Opponent, AutoCloseable {
      */
     public NetworkOpponentChannel(NetworkConnection connection, Team guestTeam,
             Supplier<Fakemon> activeGuest, Runnable onForfeit) {
+        this(connection, guestTeam, activeGuest, onForfeit, new AtomicLong()::incrementAndGet);
+    }
+
+    /**
+     * Prépare le canal avec la numérotation commune de la session.
+     *
+     * @param connection la connexion avec l'invité
+     * @param guestTeam l'équipe de l'invité
+     * @param activeGuest fournit le Fakemon actif sur le thread du moteur
+     * @param onForfeit signale un abandon
+     * @param nextRequest fournit un nouvel identifiant de demande
+     */
+    public NetworkOpponentChannel(NetworkConnection connection, Team guestTeam,
+            Supplier<Fakemon> activeGuest, Runnable onForfeit, LongSupplier nextRequest) {
         this.connection = Objects.requireNonNull(connection);
         this.guestTeam = Objects.requireNonNull(guestTeam);
         this.activeGuest = Objects.requireNonNull(activeGuest);
         this.onForfeit = Objects.requireNonNull(onForfeit);
+        this.nextRequest = Objects.requireNonNull(nextRequest);
         opponent = new NetworkOpponent(() -> request("TURN"), () -> request("REPLACEMENT"));
     }
 
@@ -61,7 +78,7 @@ public final class NetworkOpponentChannel implements Opponent, AutoCloseable {
             if (closed) {
                 throw new IllegalStateException("Le canal de l'invité est fermé.");
             }
-            pendingRequest = ++requestNumber;
+            pendingRequest = nextRequest.getAsLong();
             requestedActive = activeGuest.get();
             payload.addProperty("requestId", pendingRequest);
             payload.addProperty("reason", reason);

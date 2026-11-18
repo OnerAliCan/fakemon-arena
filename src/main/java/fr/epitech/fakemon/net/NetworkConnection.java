@@ -27,8 +27,10 @@ public class NetworkConnection implements AutoCloseable {
     public NetworkConnection(Socket socket) throws IOException {
         this.socket = Objects.requireNonNull(socket);
         try {
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+            InputStreamReader input = new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8);
+            reader = new BufferedReader(input);
+            OutputStreamWriter output = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
+            writer = new BufferedWriter(output);
         } catch (IOException error) {
             try {
                 socket.close();
@@ -83,6 +85,8 @@ public class NetworkConnection implements AutoCloseable {
      */
     @Override
     public void close() throws IOException {
-        socket.close();
+        try (socket; reader; writer) {
+            socket.close();
+        }
     }
 }

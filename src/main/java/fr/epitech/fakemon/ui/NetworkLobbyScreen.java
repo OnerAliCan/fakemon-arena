@@ -4,6 +4,10 @@ import fr.epitech.fakemon.net.NetworkClient;
 import fr.epitech.fakemon.net.NetworkConnection;
 import fr.epitech.fakemon.net.NetworkHost;
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,6 +20,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -28,6 +33,7 @@ final class NetworkLobbyScreen extends VBox implements AutoCloseable {
     private final Button joinButton = new Button("Rejoindre");
     private final Button cancelButton = new Button("Annuler");
     private final Label status = new Label();
+    private final TextArea hostAddresses = new TextArea();
     private final Runnable menu;
     private final BiConsumer<NetworkConnection, Boolean> onConnected;
     private final ExecutorService connections = Executors.newCachedThreadPool(
@@ -54,10 +60,15 @@ final class NetworkLobbyScreen extends VBox implements AutoCloseable {
         address.setAccessibleText("Adresse IP de l'hôte");
         status.setWrapText(true);
         status.setMaxWidth(440);
+        hostAddresses.setEditable(false);
+        hostAddresses.setWrapText(true);
+        hostAddresses.setPrefRowCount(2);
+        hostAddresses.setMaxWidth(440);
+        hostAddresses.setAccessibleText("Adresses IPv4 de ce PC à saisir sur le PC invité");
         Button back = new Button("Retour au menu principal");
         HBox buttons = new HBox(12, hostButton, joinButton);
         buttons.setAlignment(Pos.CENTER);
-        getChildren().addAll(new Label("Combat en LAN"), address, buttons, status, cancelButton, back);
+        getChildren().addAll(new Label("Combat en LAN"), address, buttons, status, hostAddresses, cancelButton, back);
         setBusy(false);
         hostButton.setOnAction(event -> connect(true));
         joinButton.setOnAction(event -> connect(false));
@@ -99,6 +110,11 @@ final class NetworkLobbyScreen extends VBox implements AutoCloseable {
         }
         long currentAttempt = attempt.incrementAndGet();
         setBusy(true);
+        hostAddresses.setVisible(hosting);
+        hostAddresses.setManaged(hosting);
+        if (hosting) {
+            hostAddresses.setText("Recherche des adresses IPv4 de ce PC…");
+        }
         status.setText(hosting ? "En attente d'un invité sur le port " + PORT + "…"
                 : "Connexion à " + target + "…");
         connections.execute(() -> {
@@ -125,11 +141,41 @@ final class NetworkLobbyScreen extends VBox implements AutoCloseable {
                 if (attempt.get() != currentAttempt) {
                     return null;
                 }
+                showHostAddresses(currentAttempt);
                 return host.accept();
             } finally {
                 listening.compareAndSet(host, null);
             }
         }
+    }
+
+    private void showHostAddresses(long currentAttempt) {
+        var addresses = new ArrayList<String>();
+        String message;
+        try {
+            for (NetworkInterface network : NetworkInterface.networkInterfaces().toList()) {
+                if (!network.isUp()) {
+                    continue;
+                }
+                for (var ip : network.inetAddresses().toList()) {
+                    if (ip instanceof Inet4Address && !ip.isLoopbackAddress()) {
+                        addresses.add(network.getDisplayName() + " — " + ip.getHostAddress());
+                    }
+                }
+            }
+            message = addresses.isEmpty() ? "Aucune adresse IPv4 détectée."
+                    : "Adresse IPv4 à saisir sur le PC invité\n" + String.join("\n", addresses);
+        } catch (SocketException | SecurityException error) {
+            message = "Impossible de détecter les adresses IPv4 de ce PC.";
+        }
+        String displayed = message;
+        int rows = Math.max(2, Math.min(5, addresses.size() + 1));
+        Platform.runLater(() -> {
+            if (!closed && attempt.get() == currentAttempt) {
+                hostAddresses.setText(displayed);
+                hostAddresses.setPrefRowCount(rows);
+            }
+        });
     }
 
     private void handOver(NetworkConnection connection, boolean hosting, long currentAttempt) {
@@ -160,6 +206,10 @@ final class NetworkLobbyScreen extends VBox implements AutoCloseable {
         address.setDisable(busy);
         cancelButton.setVisible(busy);
         cancelButton.setManaged(busy);
+        if (!busy) {
+            hostAddresses.setVisible(false);
+            hostAddresses.setManaged(false);
+        }
     }
 
     private void returnToMenu() {

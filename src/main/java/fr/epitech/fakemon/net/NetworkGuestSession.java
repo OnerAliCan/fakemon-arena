@@ -26,7 +26,9 @@ public final class NetworkGuestSession implements AutoCloseable {
     private final AtomicBoolean started = new AtomicBoolean();
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicLong pendingRequest = new AtomicLong();
+    private final AtomicLong submittedRequest = new AtomicLong();
     private volatile boolean battleStarted;
+    private volatile boolean replacementRequired;
     private long lastRequest;
 
     /**
@@ -80,10 +82,31 @@ public final class NetworkGuestSession implements AutoCloseable {
             } catch (IOException error) {
                 return CompletableFuture.failedFuture(error);
             }
-            if (!pendingRequest.compareAndSet(id, 0)) {
+            boolean valid = replacementRequired ? pendingRequest.compareAndSet(id, 0)
+                    : pendingRequest.get() == id && submittedRequest.compareAndSet(0, id);
+            if (!valid) {
                 return CompletableFuture.failedFuture(new IllegalStateException("La demande est périmée ou déjà traitée."));
             }
         }
+        return sendMessage(copy);
+    }
+
+    /**
+     * Demande le retrait d'un choix déjà envoyé. Le serveur confirme le résultat.
+     *
+     * @param requestId le tour concerné
+     * @return la confirmation d'envoi de la demande
+     */
+    public CompletableFuture<Void> cancelAction(long requestId) {
+        if (closed.get() || !battleStarted || requestId < 1) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Ce choix ne peut plus être annulé."));
+        }
+        JsonObject payload = new JsonObject();
+        payload.addProperty("requestId", requestId);
+        return sendMessage(new NetworkMessage("CANCEL_ACTION", payload));
+    }
+
+    private CompletableFuture<Void> sendMessage(NetworkMessage message) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         try {
             sender.execute(() -> {
@@ -91,7 +114,7 @@ public final class NetworkGuestSession implements AutoCloseable {
                     if (closed.get()) {
                         throw new IOException("La session invitée est fermée.");
                     }
-                    connection.send(copy);
+                    connection.send(message);
                     result.complete(null);
                 } catch (IOException | RuntimeException error) {
                     result.completeExceptionally(error);
@@ -125,8 +148,26 @@ public final class NetworkGuestSession implements AutoCloseable {
                             throw new IOException("La demande de choix est invalide.");
                         }
                         lastRequest = id;
+                        replacementRequired = "REPLACEMENT".equals(reason.getAsString());
                         if (!pendingRequest.compareAndSet(0, id)) {
                             throw new IOException("Une réponse de l'invité est déjà attendue.");
+                        }
+                    }
+                    case "CHOICE_STATE" -> {
+                        checkStarted();
+                        long id = readRequestId(message.getPayload());
+                        var state = message.getPayload().get("state");
+                        if (id > lastRequest || state == null || !state.isJsonPrimitive()
+                                || !state.getAsJsonPrimitive().isString()
+                                || !("WAITING".equals(state.getAsString()) || "LOCKED".equals(state.getAsString())
+                                || "CANCELLED".equals(state.getAsString()))) {
+                            throw new IOException("La confirmation de choix est invalide.");
+                        }
+                        if ("LOCKED".equals(state.getAsString())) {
+                            pendingRequest.compareAndSet(id, 0);
+                        }
+                        if (!"WAITING".equals(state.getAsString())) {
+                            submittedRequest.compareAndSet(id, 0);
                         }
                     }
                     case "EVENT" -> checkStarted();
@@ -188,6 +229,7 @@ public final class NetworkGuestSession implements AutoCloseable {
     public void close() throws IOException {
         if (closed.compareAndSet(false, true)) {
             pendingRequest.set(0);
+            submittedRequest.set(0);
             try {
                 connection.close();
             } finally {

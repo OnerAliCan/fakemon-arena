@@ -30,10 +30,13 @@ final class NetworkBattleController implements AutoCloseable {
     private Consumer<BattleEvent> onEvent;
     private Consumer<Boolean> onChoice;
     private Consumer<Throwable> onFailure;
+    private Runnable onChoiceState;
     private long requestId;
     private boolean replacement;
     private boolean closed;
     private boolean finished;
+    private boolean submitted;
+    private boolean cancellable;
 
     NetworkBattleController(NetworkConnection connection, BattleSetup setup) {
         localSide = setup == null ? Side.OPPONENT : Side.PLAYER;
@@ -47,10 +50,12 @@ final class NetworkBattleController implements AutoCloseable {
         }
     }
 
-    void start(Consumer<BattleEvent> onEvent, Consumer<Boolean> onChoice, Consumer<Throwable> onFailure) {
+    void start(Consumer<BattleEvent> onEvent, Consumer<Boolean> onChoice, Runnable onChoiceState,
+            Consumer<Throwable> onFailure) {
         this.onEvent = onEvent;
         this.onChoice = onChoice;
         this.onFailure = onFailure;
+        this.onChoiceState = onChoiceState;
         if (host != null) {
             host.start();
         } else {
@@ -63,11 +68,29 @@ final class NetworkBattleController implements AutoCloseable {
     }
 
     boolean canChoose() {
-        return !closed && !finished && requestId != 0;
+        return !closed && !finished && requestId != 0 && !submitted;
     }
 
     boolean needsReplacement() {
         return replacement;
+    }
+
+    boolean canCancel() {
+        return !closed && !finished && cancellable && submitted && !replacement;
+    }
+
+    void cancelAction() {
+        if (!canCancel()) {
+            return;
+        }
+        cancellable = false;
+        onChoiceState.run();
+        CompletableFuture<?> sent = host != null ? host.cancelHostAction(requestId) : guest.cancelAction(requestId);
+        sent.whenComplete((ignored, error) -> {
+            if (error != null) {
+                dispatchFailure(error);
+            }
+        });
     }
 
     void submitAction(PlayerAction action) {
@@ -77,7 +100,11 @@ final class NetworkBattleController implements AutoCloseable {
         NetworkMessage message = new NetworkActionCodec().encode(
                 action, state.getTeam(Side.PLAYER), state.getActiveFakemon(Side.PLAYER));
         message.getPayload().addProperty("requestId", requestId);
-        requestId = 0;
+        submitted = true;
+        cancellable = false;
+        if (replacement) {
+            requestId = 0;
+        }
         CompletableFuture<Void> sent = host != null ? host.submitHostAction(message) : guest.submitAction(message);
         sent.whenComplete((ignored, error) -> {
             if (error != null) {
@@ -127,7 +154,28 @@ final class NetworkBattleController implements AutoCloseable {
             case "ACTION_REQUIRED" -> {
                 requestId = message.getPayload().get("requestId").getAsLong();
                 replacement = "REPLACEMENT".equals(message.getPayload().get("reason").getAsString());
+                submitted = false;
+                cancellable = false;
                 onChoice.accept(replacement);
+            }
+            case "CHOICE_STATE" -> {
+                long id = message.getPayload().get("requestId").getAsLong();
+                if (id != requestId) {
+                    return;
+                }
+                switch (message.getPayload().get("state").getAsString()) {
+                    case "WAITING" -> cancellable = true;
+                    case "LOCKED" -> {
+                        cancellable = false;
+                        requestId = 0;
+                    }
+                    case "CANCELLED" -> {
+                        submitted = false;
+                        cancellable = false;
+                    }
+                    default -> throw new IllegalArgumentException("Confirmation de choix inconnue.");
+                }
+                onChoiceState.run();
             }
             default -> throw new IllegalArgumentException("Message de combat inconnu.");
         }

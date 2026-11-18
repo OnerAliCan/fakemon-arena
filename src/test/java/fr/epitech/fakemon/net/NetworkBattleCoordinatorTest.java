@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import com.google.gson.JsonObject;
 
 import fr.epitech.fakemon.core.api.BattleEndReason;
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
@@ -166,22 +170,203 @@ class NetworkBattleCoordinatorTest {
     }
 
     @Test
-    void disconnectReleasesTheEngineAndCompletesQueuedHostReplies() throws Exception {
+    void disconnectWhileChoosingClosesTheSession() throws Exception {
         try (Session session = new Session()) {
             session.coordinator.start();
             View host = new View(Side.PLAYER);
             NetworkMessage request = session.nextRequest(host);
             var action = session.coordinator.submitHostAction(host.reply(request));
+            action.get(2, TimeUnit.SECONDS);
             NetworkMessage remoteMessage;
             do {
                 remoteMessage = session.remote.receive();
             } while (!"ACTION_REQUIRED".equals(remoteMessage.getType()));
-            var duplicate = session.coordinator.submitHostAction(host.reply(request));
             session.remote.close();
             assertNotNull(session.failures.poll(2, TimeUnit.SECONDS));
-            assertThrows(ExecutionException.class, () -> action.get(2, TimeUnit.SECONDS));
-            assertThrows(ExecutionException.class, () -> duplicate.get(2, TimeUnit.SECONDS));
+            assertThrows(ExecutionException.class, () -> session.coordinator
+                    .submitHostAction(host.reply(request)).get(2, TimeUnit.SECONDS));
         }
+    }
+
+    @Test
+    void guestCanChooseFirstAndNoTurnRunsBeforeBothChoices() throws Exception {
+        try (Session session = new Session()) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            session.remote.send(guest.reply(guestRequest));
+            session.remoteState(guest, "WAITING");
+            assertEquals(1, host.state.getTurnNumber());
+            assertNull(session.hostMessages.poll(100, TimeUnit.MILLISECONDS));
+            session.coordinator.submitHostAction(host.reply(hostRequest)).get(2, TimeUnit.SECONDS);
+            session.nextRequest(host);
+            assertEquals(2, host.state.getTurnNumber());
+            assertTrue(session.failures.isEmpty(), session.failures.toString());
+        }
+    }
+
+    @Test
+    void guestSessionCanCancelAndALateCancellationDoesNotDisconnectIt() throws Exception {
+        try (Session session = new Session()) {
+            BlockingQueue<NetworkMessage> messages = new LinkedBlockingQueue<>();
+            try (NetworkGuestSession client = new NetworkGuestSession(session.remote, messages::add, session.failures::add)) {
+                client.start();
+                session.coordinator.start();
+                View host = new View(Side.PLAYER);
+                View guest = new View(Side.OPPONENT);
+                NetworkMessage hostRequest = session.nextRequest(host);
+                NetworkMessage guestRequest = nextMessage(messages, guest, "ACTION_REQUIRED", null);
+                client.submitAction(guest.reply(guestRequest)).get(2, TimeUnit.SECONDS);
+                assertThrows(ExecutionException.class,
+                        () -> client.submitAction(attack(guest, guestRequest)).get(2, TimeUnit.SECONDS));
+                nextMessage(messages, guest, "CHOICE_STATE", "WAITING");
+                client.cancelAction(id(guestRequest)).get(2, TimeUnit.SECONDS);
+                nextMessage(messages, guest, "CHOICE_STATE", "CANCELLED");
+                client.submitAction(attack(guest, guestRequest)).get(2, TimeUnit.SECONDS);
+                session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+                session.nextRequest(host);
+                nextMessage(messages, guest, "ACTION_REQUIRED", null);
+                client.cancelAction(id(guestRequest)).get(2, TimeUnit.SECONDS);
+                nextMessage(messages, guest, "CHOICE_STATE", "LOCKED");
+                assertTrue(session.failures.isEmpty(), session.failures.toString());
+                assertEquals(2, guest.state.getTurnNumber());
+            }
+        }
+    }
+
+    private static NetworkMessage nextMessage(BlockingQueue<NetworkMessage> messages, View view,
+            String type, String state) throws InterruptedException {
+        while (true) {
+            NetworkMessage message = messages.poll(2, TimeUnit.SECONDS);
+            assertNotNull(message, "Message attendu " + type);
+            view.accept(message);
+            if (type.equals(message.getType())
+                    && (state == null || state.equals(message.getPayload().get("state").getAsString()))) {
+                return message;
+            }
+        }
+    }
+
+    @Test
+    void hostCanCancelASwitchAndChooseAnAttackInstead() throws Exception {
+        try (Session session = new Session()) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            Fakemon original = host.state.getActiveFakemon(Side.PLAYER);
+            session.coordinator.submitHostAction(host.reply(hostRequest)).get(2, TimeUnit.SECONDS);
+            assertTrue(session.coordinator.cancelHostAction(id(hostRequest)).get(2, TimeUnit.SECONDS));
+            session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+            session.remote.send(attack(guest, guestRequest));
+            session.nextRequest(host);
+            assertSame(original, host.state.getActiveFakemon(Side.PLAYER));
+            assertEquals(2, host.state.getTurnNumber());
+            assertFalse(session.coordinator.cancelHostAction(id(hostRequest)).get(2, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    void guestCanCancelASwitchAndChooseAnAttackInstead() throws Exception {
+        try (Session session = new Session()) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            Fakemon original = host.state.getActiveFakemon(Side.OPPONENT);
+            session.remote.send(guest.reply(guestRequest));
+            session.remoteState(guest, "WAITING");
+            session.remote.send(cancel(guestRequest));
+            session.remoteState(guest, "CANCELLED");
+            session.remote.send(attack(guest, guestRequest));
+            session.remoteState(guest, "WAITING");
+            session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+            session.nextRequest(host);
+            assertSame(original, host.state.getActiveFakemon(Side.OPPONENT));
+            assertEquals(2, host.state.getTurnNumber());
+        }
+    }
+
+    @Test
+    void cancellationAfterTheSecondChoiceCannotUndoTheResolvedTurn() throws Exception {
+        try (Session session = new Session()) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+            session.remote.send(attack(guest, guestRequest));
+            session.remote.send(cancel(guestRequest));
+            session.nextRequest(host);
+            assertEquals(2, host.state.getTurnNumber());
+            assertFalse(session.coordinator.cancelHostAction(id(hostRequest)).get(2, TimeUnit.SECONDS));
+            session.remoteState(guest, "LOCKED");
+            assertTrue(session.failures.isEmpty(), session.failures.toString());
+        }
+    }
+
+    private static long id(NetworkMessage request) {
+        return request.getPayload().get("requestId").getAsLong();
+    }
+
+    @Test
+    void repeatingAGuestCancellationLeavesTheChoiceAvailable() throws Exception {
+        try (Session session = new Session()) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            session.remote.send(guest.reply(guestRequest));
+            session.remoteState(guest, "WAITING");
+            session.remote.send(cancel(guestRequest));
+            session.remoteState(guest, "CANCELLED");
+            session.remote.send(cancel(guestRequest));
+            NetworkMessage repeated = session.nextRemoteChoiceState(guest);
+            assertEquals("CANCELLED", repeated.getPayload().get("state").getAsString());
+            session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+            session.remote.send(attack(guest, guestRequest));
+            session.nextRequest(host);
+            assertEquals(2, host.state.getTurnNumber());
+            assertTrue(session.failures.isEmpty(), session.failures.toString());
+        }
+    }
+
+    @Test
+    void duplicateHostChoiceIsRejectedWithoutClosingTheSession() throws Exception {
+        try (Session session = new Session()) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+            assertThrows(ExecutionException.class, () -> session.coordinator
+                    .submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS));
+            assertTrue(session.failures.isEmpty(), session.failures.toString());
+            session.remote.send(attack(guest, guestRequest));
+            session.nextRequest(host);
+            assertEquals(2, host.state.getTurnNumber());
+        }
+    }
+
+    private static NetworkMessage cancel(NetworkMessage request) {
+        JsonObject payload = new JsonObject();
+        payload.addProperty("requestId", id(request));
+        return new NetworkMessage("CANCEL_ACTION", payload);
+    }
+
+    private static NetworkMessage attack(View view, NetworkMessage request) {
+        Fakemon active = view.state.getActiveFakemon(Side.PLAYER);
+        NetworkMessage message = new NetworkActionCodec().encode(
+                new UseMove(active.getMoves().get(0)), view.state.getTeam(Side.PLAYER), active);
+        message.getPayload().addProperty("requestId", id(request));
+        return message;
     }
 
     private static final class View {
@@ -276,6 +461,33 @@ class NetworkBattleCoordinatorTest {
                 message = hostMessage();
                 view.accept(message);
             } while (!"ACTION_REQUIRED".equals(message.getType()));
+            return message;
+        }
+
+        private NetworkMessage nextRemoteRequest(View view) throws IOException {
+            NetworkMessage message;
+            do {
+                message = remote.receive();
+                view.accept(message);
+            } while (!"ACTION_REQUIRED".equals(message.getType()));
+            return message;
+        }
+
+        private void remoteState(View view, String state) throws IOException {
+            NetworkMessage message;
+            do {
+                message = remote.receive();
+                view.accept(message);
+            } while (!"CHOICE_STATE".equals(message.getType())
+                    || !state.equals(message.getPayload().get("state").getAsString()));
+        }
+
+        private NetworkMessage nextRemoteChoiceState(View view) throws IOException {
+            NetworkMessage message;
+            do {
+                message = remote.receive();
+                view.accept(message);
+            } while (!"CHOICE_STATE".equals(message.getType()));
             return message;
         }
 

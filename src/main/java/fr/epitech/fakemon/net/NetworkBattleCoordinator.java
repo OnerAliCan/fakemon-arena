@@ -8,19 +8,24 @@ import fr.epitech.fakemon.core.api.BattleMode;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
 import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.PlayerAction;
+import fr.epitech.fakemon.core.api.Opponent;
 import fr.epitech.fakemon.core.api.SendFakemon;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
 import fr.epitech.fakemon.core.model.Team;
+import fr.epitech.fakemon.core.model.Fakemon;
+import fr.epitech.fakemon.core.model.Move;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
@@ -46,9 +51,14 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicBoolean finished = new AtomicBoolean();
     private final Object publishing = new Object();
-    private long requestNumber;
+    private final AtomicLong requestNumber = new AtomicLong();
     private long hostRequest;
+    private long guestRequest;
+    private PlayerAction hostChoice;
+    private PlayerAction guestChoice;
+    private PlayerAction resolvedGuestAction;
     private boolean hostNeedsReplacement;
+    private volatile boolean guestNeedsReplacement;
 
     /**
      * Prépare un combat aléatoire avec les deux équipes déjà tirées par l'hôte.
@@ -70,7 +80,8 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         this.onFailure = Objects.requireNonNull(onFailure);
         events = new NetworkEventCodec(hostTeam, guestTeam, Side.PLAYER);
         opponent = new NetworkOpponentChannel(connection, guestTeam,
-                () -> engine.getActiveFakemon(Side.OPPONENT), () -> finish(Side.PLAYER));
+                () -> engine.getActiveFakemon(Side.OPPONENT), () -> finish(Side.PLAYER),
+                requestNumber::incrementAndGet);
         engine.addListener(this::publishEvent);
     }
 
@@ -93,19 +104,39 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
                     }
                     broadcast(new NetworkMessage("BATTLE_START", payload));
                 }
-                engine.start(hostTeam, guestTeam, BattleMode.RANDOM, opponent, random);
-                requestHostAction();
+                engine.start(hostTeam, guestTeam, BattleMode.RANDOM, simultaneousOpponent(), random);
+                requestChoices();
             } catch (RuntimeException error) {
                 fail(error);
             }
         });
     }
 
+    private Opponent simultaneousOpponent() {
+        return new Opponent() {
+            @Override
+            public PlayerAction chooseAction(List<Move> moves, List<Fakemon> standing) {
+                return Objects.requireNonNull(resolvedGuestAction, "Le choix de l'invité est nécessaire.");
+            }
+
+            @Override
+            public PlayerAction chooseFakemon(List<Fakemon> standing) {
+                guestNeedsReplacement = true;
+                try {
+                    return opponent.chooseFakemon(standing);
+                } finally {
+                    guestNeedsReplacement = false;
+                }
+            }
+        };
+    }
+
     /**
-     * Soumet la réponse de l'hôte au thread moteur.
+     * Enregistre le choix de l'hôte sur le thread moteur.
+     * Le tour est résolu quand les deux choix sont présents.
      *
      * @param message le message ACTION avec son requestId
-     * @return une confirmation, ou une erreur si le choix a été refusé
+     * @return la confirmation d'enregistrement, ou une erreur si le choix a été refusé
      */
     public CompletableFuture<Void> submitHostAction(NetworkMessage message) {
         CompletableFuture<Void> result = new CompletableFuture<>();
@@ -125,17 +156,21 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
             result.completeExceptionally(error);
             return;
         }
-        hostRequest = 0;
-        hostNeedsReplacement = false;
         try {
             if (action instanceof Forfeit) {
                 finish(Side.OPPONENT);
-            } else {
+            } else if (hostNeedsReplacement) {
+                choiceState(Side.PLAYER, hostRequest, "LOCKED");
+                hostRequest = 0;
+                hostNeedsReplacement = false;
+                result.complete(null);
                 engine.submitAction(action);
-                requestHostAction();
-                if (finished.get()) {
-                    stop();
-                }
+                requestChoices();
+            } else {
+                hostChoice = action;
+                choiceState(Side.PLAYER, hostRequest, "WAITING");
+                result.complete(null);
+                resolveChoices();
             }
             result.complete(null);
         } catch (RuntimeException error) {
@@ -148,6 +183,87 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         }
     }
 
+    /**
+     * Annule le choix de l'hôte tant que le choix adverse n'est pas reçu.
+     *
+     * @param requestId l'identifiant du tour à annuler
+     * @return true si le choix a été retiré, false si le tour est déjà verrouillé
+     */
+    public CompletableFuture<Boolean> cancelHostAction(long requestId) {
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+        try {
+            battleThread.execute(() -> {
+                try {
+                    result.complete(cancelChoice(Side.PLAYER, requestId));
+                } catch (RuntimeException error) {
+                    result.completeExceptionally(error);
+                    fail(error);
+                }
+            });
+        } catch (RejectedExecutionException error) {
+            result.complete(false);
+        }
+        return result;
+    }
+
+    private boolean cancelChoice(Side side, long requestId) {
+        long expected = side == Side.PLAYER ? hostRequest : guestRequest;
+        PlayerAction choice = side == Side.PLAYER ? hostChoice : guestChoice;
+        PlayerAction other = side == Side.PLAYER ? guestChoice : hostChoice;
+        boolean accepted = !closed.get() && !finished.get() && requestId == expected
+                && (choice == null || other == null) && !hostNeedsReplacement;
+        if (accepted) {
+            if (side == Side.PLAYER) {
+                hostChoice = null;
+            } else {
+                guestChoice = null;
+            }
+        }
+        if (!closed.get()) {
+            choiceState(side, requestId, accepted ? "CANCELLED" : "LOCKED");
+        }
+        return accepted;
+    }
+
+    private void receiveGuestChoice(NetworkMessage message) {
+        long id = readRequestId(message);
+        if ("CANCEL_ACTION".equals(message.getType())) {
+            cancelChoice(Side.OPPONENT, id);
+            return;
+        }
+        if (closed.get() || finished.get() || guestRequest == 0 || id != guestRequest || guestChoice != null) {
+            throw new IllegalStateException("Aucun choix de l'invité n'est attendu pour cette demande.");
+        }
+        PlayerAction action = actions.decode(message, guestTeam, engine.getActiveFakemon(Side.OPPONENT));
+        validateSend(action, Side.OPPONENT);
+        guestChoice = action;
+        choiceState(Side.OPPONENT, guestRequest, "WAITING");
+        resolveChoices();
+    }
+
+    private void resolveChoices() {
+        if (hostChoice == null || guestChoice == null) {
+            return;
+        }
+        choiceState(Side.PLAYER, hostRequest, "LOCKED");
+        choiceState(Side.OPPONENT, guestRequest, "LOCKED");
+        PlayerAction hostAction = hostChoice;
+        resolvedGuestAction = guestChoice;
+        hostRequest = 0;
+        guestRequest = 0;
+        hostChoice = null;
+        guestChoice = null;
+        try {
+            engine.submitAction(hostAction);
+        } finally {
+            resolvedGuestAction = null;
+        }
+        requestChoices();
+        if (finished.get()) {
+            stop();
+        }
+    }
+
     private PlayerAction validateHostAction(NetworkMessage message) {
         if (closed.get() || finished.get() || hostRequest == 0) {
             throw new IllegalStateException("Aucun choix de l'hôte n'est attendu.");
@@ -155,31 +271,77 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         if (message == null || message.getPayload() == null) {
             throw new IllegalArgumentException("Une réponse de l'hôte est attendue.");
         }
-        var requestId = message.getPayload().get("requestId");
-        if (requestId == null || !requestId.isJsonPrimitive() || !requestId.getAsJsonPrimitive().isNumber()
-                || requestId.getAsBigDecimal().longValueExact() != hostRequest) {
+        if (readRequestId(message) != hostRequest) {
             throw new IllegalArgumentException("La réponse de l'hôte est périmée ou invalide.");
+        }
+        if (hostChoice != null) {
+            throw new IllegalStateException("L'hôte a déjà choisi son action.");
         }
         PlayerAction action = actions.decode(message, hostTeam, engine.getActiveFakemon(Side.PLAYER));
         if (hostNeedsReplacement && !(action instanceof SendFakemon || action instanceof Forfeit)) {
             throw new IllegalArgumentException("Un remplaçant est attendu.");
         }
-        if (action instanceof SendFakemon send
-                && (send.getFakemon().isFainted() || send.getFakemon() == engine.getActiveFakemon(Side.PLAYER))) {
-            throw new IllegalArgumentException("Ce Fakemon ne peut pas entrer en jeu.");
-        }
+        validateSend(action, Side.PLAYER);
         return action;
     }
 
-    private void requestHostAction() {
+    private void validateSend(PlayerAction action, Side side) {
+        if (action instanceof SendFakemon send
+                && (send.getFakemon().isFainted() || send.getFakemon() == engine.getActiveFakemon(side))) {
+            throw new IllegalArgumentException("Ce Fakemon ne peut pas entrer en jeu.");
+        }
+    }
+
+    private long readRequestId(NetworkMessage message) {
+        if (message == null || message.getPayload() == null) {
+            throw new IllegalArgumentException("Un message numéroté est attendu.");
+        }
+        var value = message.getPayload().get("requestId");
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+            throw new IllegalArgumentException("L'identifiant de demande doit être un entier.");
+        }
+        long id = value.getAsBigDecimal().longValueExact();
+        if (id < 1) {
+            throw new IllegalArgumentException("L'identifiant de demande doit être positif.");
+        }
+        return id;
+    }
+
+    private void requestChoices() {
         if (closed.get() || finished.get()) {
             return;
         }
-        hostRequest = ++requestNumber;
+        hostRequest = requestNumber.incrementAndGet();
         JsonObject payload = new JsonObject();
         payload.addProperty("requestId", hostRequest);
         payload.addProperty("reason", hostNeedsReplacement ? "REPLACEMENT" : "TURN");
         onHostMessage.accept(new NetworkMessage("ACTION_REQUIRED", payload));
+        if (!hostNeedsReplacement) {
+            guestRequest = requestNumber.incrementAndGet();
+            JsonObject guestPayload = new JsonObject();
+            guestPayload.addProperty("requestId", guestRequest);
+            guestPayload.addProperty("reason", "TURN");
+            deliver(Side.OPPONENT, new NetworkMessage("ACTION_REQUIRED", guestPayload));
+        }
+    }
+
+    private void choiceState(Side side, long requestId, String state) {
+        JsonObject payload = new JsonObject();
+        payload.addProperty("requestId", requestId);
+        payload.addProperty("state", state);
+        deliver(side, new NetworkMessage("CHOICE_STATE", payload));
+    }
+
+    private void deliver(Side side, NetworkMessage message) {
+        if (side == Side.PLAYER) {
+            onHostMessage.accept(message);
+        } else {
+            try {
+                connection.send(message);
+            } catch (IOException error) {
+                throw new UncheckedIOException(error);
+            }
+        }
     }
 
     private void publishEvent(BattleEvent event) {
@@ -213,7 +375,19 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
                     finish(Side.PLAYER);
                     return;
                 }
-                opponent.receiveAction(message);
+                if (guestNeedsReplacement && !"CANCEL_ACTION".equals(message.getType())) {
+                    opponent.receiveAction(message);
+                } else {
+                    battleThread.execute(() -> {
+                        try {
+                            receiveGuestChoice(message);
+                        } catch (RuntimeException error) {
+                            if (!closed.get() && !finished.get()) {
+                                fail(error);
+                            }
+                        }
+                    });
+                }
             }
         } catch (IOException | RuntimeException error) {
             if (!closed.get() && !finished.get()) {
