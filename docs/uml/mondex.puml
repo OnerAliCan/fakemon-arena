@@ -1,6 +1,6 @@
 @startuml mondex
 !pragma layout smetana
-title Fakemon Arena · Mondex (v1)
+title Fakemon Arena · Mondex
 skinparam defaultFontName Segoe UI
 skinparam state {
   BackgroundColor #FFF6D6
@@ -10,11 +10,19 @@ skinparam state {
 hide empty description
 
 state "Menu principal" as Menu
-state "Mondex" as Mondex : liste des mons avec leur nom,\nde 1 à 30 puis les mons ajoutés
-state "Détails du Mon" as Details : noms français et d'origine, sprite de face,\ntypes, 6 stats, talent, cri à écouter,\nconcept, designer
+state "Mondex" as Mondex : catalogue intégré et utilisateur\ntrié par numéro, nom français et sprite
+state "Détails du Fakemon" as Details : noms français et d'origine, sprite de face,\ntypes, 6 stats de base, talent, concept et designer
 
 Menu --> Mondex : Mondex
-Mondex --> Details : clic sur un mon
-Details --> Mondex : Échap ou Retour
+Mondex --> Details : clic ou Entrée sur une espèce
+Details --> Details : Écouter le cri disponible\nvolume des effets sonores
+Details --> Mondex : Échap ou Retour\narrêt du cri, sélection conservée
 Mondex --> Menu : Échap ou Retour
+
+note right of Details
+  Designer absent affiché comme Inconnu(e).
+  Concept absent masqué.
+  Bouton désactivé si le cri est absent.
+  Erreur affichée si le fichier audio est invalide.
+end note
 @enduml
