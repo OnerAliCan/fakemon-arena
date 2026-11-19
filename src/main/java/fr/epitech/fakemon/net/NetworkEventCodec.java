@@ -27,6 +27,11 @@ import fr.epitech.fakemon.core.api.SelectionReason;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.TalentActivatedEvent;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
+import fr.epitech.fakemon.core.api.StatusAppliedEvent;
+import fr.epitech.fakemon.core.api.StatusActivatedEvent;
+import fr.epitech.fakemon.core.api.AttackPreventedEvent;
+import fr.epitech.fakemon.core.api.StatusRemovedEvent;
+import fr.epitech.fakemon.core.model.StatusType;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Team;
 import fr.epitech.fakemon.core.model.Item;
@@ -52,6 +57,10 @@ public final class NetworkEventCodec {
             Map.entry("SELECTION_REQUIRED", FakemonSelectionRequiredEvent.class),
             Map.entry("ITEM_ACTIVATED", ItemActivatedEvent.class),
             Map.entry("TALENT_ACTIVATED", TalentActivatedEvent.class),
+            Map.entry("STATUS_APPLIED", StatusAppliedEvent.class),
+            Map.entry("STATUS_ACTIVATED", StatusActivatedEvent.class),
+            Map.entry("ATTACK_PREVENTED", AttackPreventedEvent.class),
+            Map.entry("STATUS_REMOVED", StatusRemovedEvent.class),
             Map.entry("BATTLE_ENDED", BattleEndedEvent.class));
 
     private final Gson gson;
@@ -161,6 +170,10 @@ public final class NetworkEventCodec {
         }
         Side side = toLocalSide(wireSide);
         return switch (eventType) {
+            case "STATUS_APPLIED" -> new StatusAppliedEvent(side, mon, readEnum(data, "status", StatusType.class));
+            case "STATUS_ACTIVATED" -> new StatusActivatedEvent(side, mon, readEnum(data, "status", StatusType.class));
+            case "ATTACK_PREVENTED" -> new AttackPreventedEvent(side, mon, readEnum(data, "status", StatusType.class));
+            case "STATUS_REMOVED" -> new StatusRemovedEvent(side, mon, readEnum(data, "status", StatusType.class));
             case "FAKEMON_ENTERED" -> new FakemonEnteredEvent(side, mon);
             case "FAKEMON_FAINTED" -> new FakemonFaintedEvent(side, mon);
             case "CRITICAL_HIT" -> new CriticalHitEvent(side, mon);

@@ -1,6 +1,8 @@
 package fr.epitech.fakemon.core.model;
 
 import java.util.List;
+import java.util.Objects;
+import fr.epitech.fakemon.core.effects.Status;
 
 /**
  * Un mon pendant un combat : son espèce, ses 4 attaques et ses PV actuels.
@@ -12,6 +14,31 @@ public class Fakemon {
     private int currentHp;
     private Item item;
     private Stats battleStats;
+    private Status status;
+
+    /** @return le statut courant, ou null si le Fakemon n'en porte aucun */
+    public Status getStatus() {
+        return status;
+    }
+
+    /**
+     * Applique un statut sans remplacer un état existant, en respectant les immunités.
+     * @param effect nouvel état à appliquer
+     * @return true si le statut a été appliqué
+     */
+    public boolean applyStatus(Status effect) {
+        Objects.requireNonNull(effect);
+        if (status != null || isFainted() || !effect.canApply(this)) {
+            return false;
+        }
+        status = effect;
+        return true;
+    }
+
+    /** Retire le statut lorsque le combat se termine. */
+    public void clearStatus() {
+        status = null;
+    }
 
     /**
      * Crée un Fakemon avec tous ses PV.
@@ -56,11 +83,12 @@ public class Fakemon {
     }
 
     /**
-     * Donne les statistiques de combat avec les bonus de l'objet tenu.
-     * @return les statistiques de base ou leur vue décorée par l'objet
+     * Donne les statistiques de combat avec les bonus de l'objet tenu et les effets du statut.
+     * @return les statistiques de base ou leur vue décorée par l'objet et le statut
      */
     public Stats getStats() {
-        return battleStats == null ? species.getStats() : battleStats;
+        Stats stats = battleStats == null ? species.getStats() : battleStats;
+        return status == null ? stats : status.decorate(stats);
     }
 
     /**

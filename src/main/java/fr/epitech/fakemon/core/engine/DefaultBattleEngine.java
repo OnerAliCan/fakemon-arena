@@ -31,6 +31,10 @@ import fr.epitech.fakemon.core.api.SendFakemon;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.TalentActivatedEvent;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
+import fr.epitech.fakemon.core.api.StatusAppliedEvent;
+import fr.epitech.fakemon.core.api.StatusActivatedEvent;
+import fr.epitech.fakemon.core.api.AttackPreventedEvent;
+import fr.epitech.fakemon.core.api.StatusRemovedEvent;
 import fr.epitech.fakemon.core.api.UseMove;
 import fr.epitech.fakemon.core.effects.Ability;
 import fr.epitech.fakemon.core.effects.Fracas;
@@ -38,6 +42,7 @@ import fr.epitech.fakemon.core.effects.Recuperation;
 import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Move;
+import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Team;
 
 
@@ -135,8 +140,7 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
     @Override
     public void submitAction(PlayerAction playerAction) {
         if (playerAction instanceof Forfeit && phase == BattlePhase.WAITING_ACTION) {
-            phase = BattlePhase.FINISHED;
-            notifyListeners(new BattleEndedEvent(Side.OPPONENT, BattleEndReason.FORFEIT));
+            endBattle(Side.OPPONENT, BattleEndReason.FORFEIT);
         } else if (playerAction instanceof SendFakemon sendfakemon && phase == BattlePhase.WAITING_FIRST_FAKEMON) {
             activePlayerFakemon = sendfakemon.getFakemon();
             activeOpponentFakemon = opponentTeam.getFakemons().get(0);
@@ -212,12 +216,12 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
 
             if (firstToPlay == Side.PLAYER) {
                 useMove(Side.PLAYER, playerMove);
-                if (!activeOpponentFakemon.isFainted()) {
+                if (!activeOpponentFakemon.isFainted() && !activePlayerFakemon.isFainted()) {
                     useMove(Side.OPPONENT, opponentMove);
                 }
             } else {
                 useMove(Side.OPPONENT, opponentMove);
-                if (!activePlayerFakemon.isFainted()) {
+                if (!activePlayerFakemon.isFainted() && !activeOpponentFakemon.isFainted()) {
                     useMove(Side.PLAYER, playerMove);
                 }
             }
@@ -285,10 +289,39 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
         targetSide = Side.PLAYER;
     }
 
+    if (attacker.getStatus() != null) {
+        var effect = attacker.getStatus();
+        boolean prevented = effect.preventsAttack(random);
+        if (prevented) {
+            notifyListeners(new AttackPreventedEvent(side, attacker, effect.getType()));
+            int damage = effect.preventedAttackDamage(attacker);
+            if (damage > 0) {
+                notifyListeners(new StatusActivatedEvent(side, attacker, effect.getType()));
+                attacker.takeDamage(damage);
+                notifyListeners(new HpLostEvent(side, attacker, damage, attacker.getCurrentHp()));
+                if (attacker.isFainted()) {
+                    notifyListeners(new FakemonFaintedEvent(side, attacker));
+                }
+            }
+        }
+        if (effect.hasEnded()) {
+            attacker.clearStatus();
+            notifyListeners(new StatusRemovedEvent(side, attacker, effect.getType()));
+        }
+        if (prevented) {
+            return;
+        }
+    }
+
     notifyListeners(new MoveUsedEvent(side, attacker, move));
 
     if (!damageCalculator.rollAccuracy(move)) {
         notifyListeners(new MoveMissedEvent(side, attacker, move));
+        return;
+    }
+
+    if (move.getCategory() == MoveCategory.STATUS) {
+        applyMoveStatus(targetSide, target, move);
         return;
     }
 
@@ -318,8 +351,51 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
 
     if (target.isFainted()) {
         notifyListeners(new FakemonFaintedEvent(targetSide, target));
+    } else {
+        applyMoveStatus(targetSide, target, move);
     }
 }
+
+    private void applyMoveStatus(Side side, Fakemon target, Move move) {
+        if (move.getStatus() == null || target.isFainted() || target.getStatus() != null) {
+            return;
+        }
+        var effect = move.getStatus().create();
+        if (!effect.canApply(target)) {
+            if (move.getCategory() == MoveCategory.STATUS) {
+                notifyListeners(new EffectivenessEvent(side, target, Effectiveness.NO_EFFECT));
+            }
+            return;
+        }
+        if ((move.getStatusChance() == 100 || random.nextInt(100) < move.getStatusChance())
+                && target.applyStatus(effect)) {
+            notifyListeners(new StatusAppliedEvent(side, target, move.getStatus()));
+        }
+    }
+
+    private void applyEndOfTurnStatus(Side side) {
+        Fakemon holder = getActiveFakemon(side);
+        if (holder.isFainted() || holder.getStatus() == null) {
+            return;
+        }
+        int damage = holder.getStatus().endOfTurnDamage(holder);
+        if (damage > 0) {
+            notifyListeners(new StatusActivatedEvent(side, holder, holder.getStatus().getType()));
+            holder.takeDamage(damage);
+            notifyListeners(new HpLostEvent(side, holder, damage, holder.getCurrentHp()));
+            if (holder.isFainted()) {
+                notifyListeners(new FakemonFaintedEvent(side, holder));
+            }
+        }
+    }
+
+    private void endBattle(Side winner, BattleEndReason reason) {
+        for (Team team : List.of(playerTeam, opponentTeam)) {
+            team.getFakemons().forEach(Fakemon::clearStatus);
+        }
+        phase = BattlePhase.FINISHED;
+        notifyListeners(new BattleEndedEvent(winner, reason));
+    }
 
     /**
      * Met un Fakemon sur le terrain pour un camp et annonce son entrée en jeu.
@@ -398,12 +474,12 @@ public class DefaultBattleEngine implements  BattleEngine, BattleState{
      */
     private void applyEndOfTurn() {
         applyEndOfTurnTalents();
+        applyEndOfTurnStatus(Side.PLAYER);
+        applyEndOfTurnStatus(Side.OPPONENT);
         if (!playerTeam.hasStandingFakemon()) {
-            notifyListeners(new BattleEndedEvent(Side.OPPONENT, BattleEndReason.ALL_FAINTED));
-            phase = BattlePhase.FINISHED;
+            endBattle(Side.OPPONENT, BattleEndReason.ALL_FAINTED);
         } else if (!opponentTeam.hasStandingFakemon()) {
-            notifyListeners(new BattleEndedEvent(Side.PLAYER, BattleEndReason.ALL_FAINTED));
-            phase = BattlePhase.FINISHED;
+            endBattle(Side.PLAYER, BattleEndReason.ALL_FAINTED);
         } else if (activePlayerFakemon.isFainted()) {
             notifyListeners(new FakemonSelectionRequiredEvent(SelectionReason.REPLACEMENT));
             phase = BattlePhase.WAITING_REPLACEMENT;

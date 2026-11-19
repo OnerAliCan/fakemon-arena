@@ -411,6 +411,8 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
                 return;
             }
             try {
+                hostTeam.getFakemons().forEach(Fakemon::clearStatus);
+                guestTeam.getFakemons().forEach(Fakemon::clearStatus);
                 broadcast(events.encode(new BattleEndedEvent(winner, BattleEndReason.FORFEIT)));
             } catch (RuntimeException error) {
                 onFailure.accept(error);

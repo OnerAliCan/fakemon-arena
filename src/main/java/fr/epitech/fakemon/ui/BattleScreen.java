@@ -24,6 +24,12 @@ import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.TalentActivatedEvent;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
 import fr.epitech.fakemon.core.api.UseMove;
+import fr.epitech.fakemon.core.api.StatusAppliedEvent;
+import fr.epitech.fakemon.core.api.StatusActivatedEvent;
+import fr.epitech.fakemon.core.api.AttackPreventedEvent;
+import fr.epitech.fakemon.core.api.StatusRemovedEvent;
+import fr.epitech.fakemon.core.model.StatusType;
+import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Item;
@@ -238,8 +244,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             Fakemon mon = entered.getFakemon();
             int hp = mon.getCurrentHp();
             Item item = mon.getItem();
+            StatusType status = mon.getStatus() == null ? null : mon.getStatus().getType();
             events.add(() -> {
-                panel(entered.getSide()).show(mon, hp, item);
+                panel(entered.getSide()).show(mon, hp, item, status);
                 appendLog(name(mon) + " entre en jeu.");
             });
         } else {
@@ -254,6 +261,20 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             appendLog("Tour " + turn.getTurnNumber());
         } else if (event instanceof MoveUsedEvent move) {
             appendLog(name(move.getFakemon()) + " utilise " + move.getMove().getName() + " !");
+        } else if (event instanceof StatusAppliedEvent applied) {
+            panel(applied.getSide()).status(applied.getStatus());
+            appendLog(name(applied.getFakemon()) + " reçoit le statut " + applied.getStatus().getDisplayName() + ".");
+        } else if (event instanceof StatusRemovedEvent removed) {
+            panel(removed.getSide()).status(null);
+            appendLog(removed.getStatus() == StatusType.SLEEP ? name(removed.getFakemon()) + " se réveille."
+                    : removed.getStatus().getDisplayName() + " prend fin pour " + name(removed.getFakemon()) + ".");
+        } else if (event instanceof StatusActivatedEvent activated) {
+            appendLog(activated.getStatus() == StatusType.CONFUSION
+                    ? name(activated.getFakemon()) + " se blesse dans sa confusion."
+                    : activated.getStatus().getDisplayName() + " affecte " + name(activated.getFakemon()) + ".");
+        } else if (event instanceof AttackPreventedEvent prevented) {
+            appendLog(prevented.getStatus().getDisplayName() + " empêche "
+                    + name(prevented.getFakemon()) + " d'attaquer.");
         } else if (event instanceof HpLostEvent loss) {
             panel(loss.getSide()).health(loss.getRemainingHp(), loss.getFakemon().getMaxHp());
             appendLog(name(loss.getFakemon()) + " perd " + loss.getHpLost() + " PV.");
@@ -313,8 +334,11 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         var moves = state().getActiveFakemon(Side.PLAYER).getMoves();
         for (int index = 0; index < moves.size(); index++) {
             var move = moves.get(index);
+            String power = move.getCategory() == MoveCategory.STATUS ? "Sans dégâts" : "Puissance " + move.getPower();
+            String effect = move.getStatus() == null ? ""
+                    : "\n" + move.getStatus().getDisplayName() + " : " + move.getStatusChance() + "%";
             Button button = new Button(move.getName() + " — " + move.getType()
-                    + "\nPuissance " + move.getPower() + " · Précision " + move.getAccuracy() + "%");
+                    + "\n" + power + " · Précision " + move.getAccuracy() + "%" + effect);
             button.setPrefWidth(235);
             button.setMinHeight(48);
             button.setWrapText(true);
@@ -382,6 +406,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         private final boolean back;
         private final ProgressBar bar = new ProgressBar();
         private final Label hp = new Label();
+        private final Label status = new Label();
         private final VBox activation = new VBox(2);
 
         FighterPanel(boolean back) {
@@ -416,12 +441,19 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             activation.setManaged(false);
         }
 
-        void show(Fakemon mon, int currentHp, Item item) {
+        void show(Fakemon mon, int currentHp, Item item, StatusType statusType) {
             Label name = new Label(BattleScreen.name(mon));
             name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
             getChildren().setAll(name, new Label("Types : " + mon.getSpecies().getTypes()),
-                    BattleBadges.itemLabel(item), bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104), activation);
+                    BattleBadges.itemLabel(item), status, bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104), activation);
+            status(statusType);
             health(currentHp, mon.getMaxHp());
+        }
+
+        void status(StatusType type) {
+            status.setText(type == null ? "" : "Statut : " + type.getDisplayName());
+            status.setVisible(type != null);
+            status.setManaged(type != null);
         }
 
         void health(int current, int max) {

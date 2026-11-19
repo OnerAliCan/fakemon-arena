@@ -47,6 +47,7 @@ public class DamageCalculator {
     /**
      * Calcule les dégâts d'une attaque qui a touché. Le résultat est arrondi à l'entier inférieur
      * à la toute fin, avec au moins 1 dégât, sauf si la cible est immunisée.
+     * Une attaque de catégorie STATUS ne produit ni dégâts directs ni critique.
      *
      * @param attacker le Fakemon qui attaque
      * @param target le Fakemon visé
@@ -54,6 +55,10 @@ public class DamageCalculator {
      * @return les dégâts, le critique et le multiplicateur d'efficacité
      */
     public DamageResult calculate(Fakemon attacker, Fakemon target, Move move) {
+        if (move.getCategory() == MoveCategory.STATUS) {
+            return new DamageResult(0, false,
+                    typeChart.multiplier(move.getType(), target.getSpecies().getTypes()));
+        }
         double resultDamage;
         boolean critical;
         double multiplier = 1;

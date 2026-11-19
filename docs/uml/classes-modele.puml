@@ -28,6 +28,18 @@ package "core.model" {
   enum MoveCategory <<#8>> {
     PHYSICAL
     SPECIAL
+    STATUS
+  }
+
+  enum StatusType <<#32>> {
+    BURN
+    POISON
+    PARALYSIS
+    SLEEP
+    CONFUSION
+    --
+    + create() : Status
+    + getDisplayName() : String
   }
 
   class Move <<#8>> {
@@ -37,8 +49,11 @@ package "core.model" {
     - power : int
     - accuracy : int
     - priority : int
+    - status : StatusType
+    - statusChance : int
     --
     + Move(name, type, category, power, accuracy, priority)
+    + Move(name, type, category, power, accuracy, priority, status, statusChance)
     + getters
   }
 
@@ -94,6 +109,7 @@ package "core.model" {
     - currentHp : int
     - item : Item
     - battleStats : Stats
+    - status : Status
     --
     + Fakemon(species, moves)
     + getSpecies() : Species
@@ -106,6 +122,9 @@ package "core.model" {
     + heal(healedHp : int) : void
     + getItem() : Item
     + equip(item : Item) : void
+    + getStatus() : Status
+    + applyStatus(effect : Status) : boolean
+    + clearStatus() : void
   }
 
   class Team <<#8>> {
@@ -135,6 +154,25 @@ package "core.model" {
 }
 
 package "core.effects" {
+  abstract class Status <<#32>> {
+    + getType() : StatusType
+    + canApply(target : Fakemon) : boolean
+    + decorate(stats : Stats) : Stats
+    + preventsAttack(random : Random) : boolean
+    + preventedAttackDamage(holder : Fakemon) : int
+    + hasEnded() : boolean
+    + endOfTurnDamage(holder : Fakemon) : int
+  }
+  class Burn
+  class Poison
+  class Paralysis
+  class Sleep {
+    - remaining : int
+    - ended : boolean
+  }
+  class Confusion {
+    - remaining : int
+  }
   class ItemStats <<#24>> {
     - base : Stats
     - attack : double
@@ -163,6 +201,13 @@ Carapace --|> Ability
 DernierSouffle --|> Ability
 Fracas --|> Ability
 Recuperation --|> Ability
+Burn --|> Status
+Poison --|> Status
+Paralysis --|> Status
+Sleep --|> Status
+Confusion --|> Status
+Paralysis ..> ItemStats : vitesse ×0,5
+StatusType ..> Status : crée
 
 SpeciesBuilder ..> Species : construit
 Species --> "1" Stats
@@ -173,14 +218,18 @@ Fakemon --> "1" Species
 Fakemon --> "4" Move : moves
 Fakemon --> "0..1" Item
 Fakemon --> "0..1" ItemStats : battleStats
+Fakemon *--> "0..1" Status : état de combat
 Team o--> "6 au plus" Fakemon
 Move --> "1" Type
 Move --> "1" MoveCategory
+Move --> "0..1" StatusType : effet possible
 
 legend bottom left
   <b>Decorator (ItemStats)</b> : chaque objet crée une vue des stats de base et applique son bonus de 20 %.
   <b>Talent</b> : la fiche conserve un identifiant. Les classes Ability appliquent les effets en combat.
-  <b>Fakemon</b> : une exception si moves ne contient pas 4 attaques. getStats() renvoie les stats avec les bonus si un objet est équipé. currentHp reste entre 0 et getMaxHp().
+  <b>State (Status)</b> : chaque Fakemon possède au plus un état ; le moteur lui délègue les effets avant l'attaque et en fin de tour.
+  <b>Fakemon</b> : une exception si moves ne contient pas 4 attaques. getStats() applique l'objet puis le statut. currentHp reste entre 0 et getMaxHp().
+  <b>Statuts</b> : pas de remplacement d'un état existant ; compteurs figés sur le banc et nettoyage en fin de combat.
   <b>Team</b> accepte de 0 à 6 Fakemon. getStandingFakemons() crée une liste des membres encore debout.
   <b>Builder</b> vérifie la présence des champs obligatoires. JsonSpeciesRepository valide les valeurs du catalogue.
   <b>Stats</b> : des double, car le GDD n'arrondit les dégâts qu'à la fin. Les objets ne changent jamais les PV : getHp() reste un int.

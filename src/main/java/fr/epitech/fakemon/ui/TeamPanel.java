@@ -55,6 +55,9 @@ final class TeamPanel extends VBox {
         Label name = lightLabel(member.getSpecies().getFrenchName());
         name.setStyle("-fx-text-fill: #fff5dd; -fx-font-weight: bold;");
         VBox identity = new VBox(3, name, lightLabel(member.getSpecies().getTypes().toString()));
+        if (member.getStatus() != null) {
+            identity.getChildren().add(lightLabel(member.getStatus().getType().getDisplayName()));
+        }
         identity.setMinWidth(148);
         double ratio = (double) member.getCurrentHp() / member.getMaxHp();
         ProgressBar hpBar = new ProgressBar(ratio);

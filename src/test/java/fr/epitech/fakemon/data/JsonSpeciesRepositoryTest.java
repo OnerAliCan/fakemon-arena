@@ -6,6 +6,7 @@ import fr.epitech.fakemon.core.api.InvalidSpeciesException;
 import fr.epitech.fakemon.core.model.BaseStats;
 import fr.epitech.fakemon.core.model.Species;
 import fr.epitech.fakemon.core.model.Type;
+import fr.epitech.fakemon.core.model.StatusType;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +14,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /** Vérifie le catalogue fourni et les sauvegardes utilisateur. */
 class JsonSpeciesRepositoryTest {
@@ -67,6 +70,27 @@ class JsonSpeciesRepositoryTest {
         assertNull(saved.getConcept());
         assertNull(saved.getDesigner());
         assertNull(saved.getCry());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = StatusType.class, names = {"BURN", "POISON", "PARALYSIS", "SLEEP", "CONFUSION"})
+    void aSavedSpeciesKeepsItsStatusMovesAfterReload(StatusType status) {
+        Type type = switch (status) {
+            case BURN -> Type.FIRE;
+            case POISON -> Type.VENOM;
+            case PARALYSIS -> Type.LIGHTNING;
+            case SLEEP -> Type.ETHER;
+            case CONFUSION -> Type.SHADOW;
+        };
+        var fire = repository.findAll().stream()
+                .filter(species -> species.getTypes().contains(type)).findFirst().orElseThrow();
+        repository.add(candidate().types(fire.getTypes()).possibleMoves(fire.getPossibleMoves()).build());
+        var effects = reload().findByOriginalName("FakemonTest").orElseThrow().getPossibleMoves().stream()
+                .filter(move -> move.getStatus() == status).toList();
+        boolean pureOnly = status == StatusType.SLEEP || status == StatusType.CONFUSION;
+        assertEquals(pureOnly ? 1 : 2, effects.size());
+        assertEquals(pureOnly ? List.of(100) : List.of(20, 100),
+                effects.stream().map(move -> move.getStatusChance()).toList());
     }
 
     @Test

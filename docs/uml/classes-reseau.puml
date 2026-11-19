@@ -75,6 +75,11 @@ class NetworkBattleController
 class NetworkLobbyScreen
 class BattleScreen
 class DefaultBattleEngine
+abstract class BattleEvent
+class StatusAppliedEvent
+class StatusActivatedEvent
+class StatusRemovedEvent
+class AttackPreventedEvent
 NetworkConnection --> NetworkMessageCodec
 NetworkMessageCodec --> NetworkMessage
 NetworkHost ..> NetworkConnection
@@ -98,4 +103,14 @@ BattleScreen --> NetworkBattleController
 NetworkLobbyScreen ..> NetworkHost
 NetworkLobbyScreen ..> NetworkClient
 NetworkLobbyScreen ..> NetworkBattleController
+StatusAppliedEvent --|> BattleEvent
+StatusActivatedEvent --|> BattleEvent
+StatusRemovedEvent --|> BattleEvent
+AttackPreventedEvent --|> BattleEvent
+NetworkEventCodec ..> BattleEvent : encode et décode les statuts
+note right of NetworkBattleState
+  Applique et retire les statuts annoncés.
+  Efface les statuts à la fin du combat.
+  Seul l'hôte fait les tirages et avance les compteurs.
+end note
 @enduml
