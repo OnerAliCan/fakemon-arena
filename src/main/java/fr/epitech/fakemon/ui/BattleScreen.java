@@ -84,6 +84,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         this.scenes = scenes;
         this.menu = menu;
         setPadding(new Insets(12));
+        var background = BattleScreen.class.getResource("/backgrounds/battle-grassland.png");
+        arena.setStyle("-fx-background-image: url('" + background.toExternalForm()
+                + "'); -fx-background-size: cover; -fx-background-position: center;");
         setFocusTraversable(true);
         pauseButton.setOnAction(event -> pause());
         teamButton.setOnAction(event -> showTeam(false));
