@@ -37,6 +37,26 @@ class BattleSetupTest {
     @TempDir Path userFolder;
 
     @Test
+    void networkTeamsKeepBothSelectionsAndStartersEvenWithSharedSpecies() {
+        var roster = new JsonSpeciesRepository(new SpeciesFactory(), userFolder);
+        var host = roster.findAll().subList(0, 6);
+        var guest = new ArrayList<>(host);
+        Collections.rotate(guest, 2);
+        var setup = BattleSetup.networkConstructed(roster, host, guest, new Random(35));
+        assertEquals(host, setup.player.getFakemons().stream().map(Fakemon::getSpecies).toList());
+        assertEquals(guest, setup.opponent.getFakemons().stream().map(Fakemon::getSpecies).toList());
+        assertNotSame(setup.player.getFakemons().getFirst(), setup.opponent.getFakemons().get(2));
+        for (var team : List.of(setup.player, setup.opponent)) {
+            assertTrue(team.getFakemons().stream().allMatch(mon -> mon.getItem() != null));
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> BattleSetup.networkConstructed(roster, host, Collections.nCopies(6, host.getFirst()), new Random()));
+        var foreignRoster = new JsonSpeciesRepository(new SpeciesFactory(), userFolder.resolve("other"));
+        assertThrows(IllegalArgumentException.class,
+                () -> BattleSetup.networkConstructed(roster, host, foreignRoster.findAll().subList(0, 6), new Random()));
+    }
+
+    @Test
     void sixDifferentSpeciesAreRequiredForAConstructedMatch() {
         var roster = new JsonSpeciesRepository(new SpeciesFactory(), userFolder);
         var species = roster.findAll().getFirst();

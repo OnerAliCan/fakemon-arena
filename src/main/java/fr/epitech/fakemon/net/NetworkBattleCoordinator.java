@@ -10,6 +10,7 @@ import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.PlayerAction;
 import fr.epitech.fakemon.core.api.Opponent;
 import fr.epitech.fakemon.core.api.SendFakemon;
+import fr.epitech.fakemon.core.api.SelectionReason;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
 import fr.epitech.fakemon.core.model.Team;
@@ -37,6 +38,7 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
     private final Team hostTeam;
     private final Team guestTeam;
     private final Random random;
+    private final BattleMode mode;
     private final Consumer<NetworkMessage> onHostMessage;
     private final Consumer<Throwable> onFailure;
     private final DefaultBattleEngine engine = new DefaultBattleEngine();
@@ -72,10 +74,26 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
      */
     public NetworkBattleCoordinator(NetworkConnection connection, Team hostTeam, Team guestTeam, Random random,
             Consumer<NetworkMessage> onHostMessage, Consumer<Throwable> onFailure) {
+        this(connection, hostTeam, guestTeam, BattleMode.RANDOM, random, onHostMessage, onFailure);
+    }
+
+    /**
+     * Prépare le combat avec les premiers combattants déjà choisis en mode construit.
+     * @param connection connexion avec l'invité
+     * @param hostTeam équipe de l'hôte, premier combattant en tête
+     * @param guestTeam équipe de l'invité, premier combattant en tête
+     * @param mode mode choisi dans le lobby
+     * @param random source de hasard du moteur
+     * @param onHostMessage reçoit les messages depuis un thread de travail
+     * @param onFailure reçoit une erreur terminale depuis un thread de travail
+     */
+    public NetworkBattleCoordinator(NetworkConnection connection, Team hostTeam, Team guestTeam, BattleMode mode,
+            Random random, Consumer<NetworkMessage> onHostMessage, Consumer<Throwable> onFailure) {
         this.connection = Objects.requireNonNull(connection);
         this.hostTeam = Objects.requireNonNull(hostTeam);
         this.guestTeam = Objects.requireNonNull(guestTeam);
         this.random = Objects.requireNonNull(random);
+        this.mode = Objects.requireNonNull(mode);
         this.onHostMessage = Objects.requireNonNull(onHostMessage);
         this.onFailure = Objects.requireNonNull(onFailure);
         events = new NetworkEventCodec(hostTeam, guestTeam, Side.PLAYER);
@@ -97,14 +115,17 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
                 JsonObject payload = new JsonObject();
                 payload.add("hostTeam", teams.encode(hostTeam).getPayload());
                 payload.add("guestTeam", teams.encode(guestTeam).getPayload());
-                payload.addProperty("mode", BattleMode.RANDOM.name());
+                payload.addProperty("mode", mode.name());
                 synchronized (publishing) {
                     if (closed.get()) {
                         return;
                     }
                     broadcast(new NetworkMessage("BATTLE_START", payload));
                 }
-                engine.start(hostTeam, guestTeam, BattleMode.RANDOM, simultaneousOpponent(), random);
+                engine.start(hostTeam, guestTeam, mode, simultaneousOpponent(), random);
+                if (mode == BattleMode.CONSTRUCTED) {
+                    engine.submitAction(new SendFakemon(hostTeam.getFakemons().getFirst()));
+                }
                 requestChoices();
             } catch (RuntimeException error) {
                 fail(error);
@@ -356,6 +377,9 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         }
         NetworkMessage message;
         if (event instanceof FakemonSelectionRequiredEvent selection) {
+            if (selection.getReason() == SelectionReason.FIRST_FAKEMON) {
+                return;
+            }
             hostNeedsReplacement = true;
             message = events.encodeSelection(selection, Side.PLAYER);
         } else {

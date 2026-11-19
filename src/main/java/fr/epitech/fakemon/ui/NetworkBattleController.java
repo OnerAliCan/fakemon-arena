@@ -45,7 +45,7 @@ final class NetworkBattleController implements AutoCloseable {
             guest = new NetworkGuestSession(connection, this::dispatch, this::dispatchFailure);
         } else {
             guest = null;
-            host = new NetworkBattleCoordinator(connection, setup.player, setup.opponent, new Random(),
+            host = new NetworkBattleCoordinator(connection, setup.player, setup.opponent, setup.mode, new Random(),
                     this::dispatch, this::dispatchFailure);
         }
     }

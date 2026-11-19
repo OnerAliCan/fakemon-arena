@@ -37,13 +37,8 @@ public class MainMenu extends VBox {
         combatOnlineButton.setOnAction(event -> {
             Runnable menu = () -> sceneManager.show(this);
             sceneManager.show(new NetworkLobbyScreen(menu, (connection, hosting) -> {
-                BattleSetup setup = null;
-                if (hosting) {
-                    var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
-                    setup = BattleSetup.random(roster, new java.util.Random());
-                }
-                var controller = new NetworkBattleController(connection, setup);
-                sceneManager.show(new BattleScreen(sceneManager, controller, menu));
+                var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
+                sceneManager.show(new NetworkPreparationScreen(connection, hosting, roster, sceneManager, menu));
             }));
         });
 

@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 
 import fr.epitech.fakemon.core.api.BattleEndReason;
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
+import fr.epitech.fakemon.core.api.BattleMode;
 import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.PlayerAction;
 import fr.epitech.fakemon.core.api.SendFakemon;
@@ -34,9 +35,35 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /** Exerce le moteur hébergé avec un invité relié par un socket TCP local. */
 class NetworkBattleCoordinatorTest {
+    @Test
+    void constructedBattleStartsWithBothChosenStartersAndAcceptsSimultaneousActions() throws Exception {
+        try (Session session = new Session(BattleMode.CONSTRUCTED)) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            assertEquals("TURN", hostRequest.getPayload().get("reason").getAsString());
+            assertEquals("TURN", guestRequest.getPayload().get("reason").getAsString());
+            assertSame(host.state.getTeam(Side.PLAYER).getFakemons().getFirst(),
+                    host.state.getActiveFakemon(Side.PLAYER));
+            assertSame(guest.state.getTeam(Side.PLAYER).getFakemons().getFirst(),
+                    guest.state.getActiveFakemon(Side.PLAYER));
+            session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+            session.remote.send(attack(guest, guestRequest));
+            session.nextRequest(host);
+            session.nextRemoteRequest(guest);
+            assertEquals(2, host.state.getTurnNumber());
+            assertEquals(host.state.getTurnNumber(), guest.state.getTurnNumber());
+            assertTrue(session.failures.isEmpty(), session.failures.toString());
+        }
+    }
+
     @Test
     void guestSessionReceivesTheBattleAndSubmitsChoicesThroughItsSenderThread() throws Exception {
         try (Session session = new Session()) {
@@ -79,9 +106,10 @@ class NetworkBattleCoordinatorTest {
         }
     }
 
-    @Test
-    void playsACompleteSixAgainstSixBattleWithSwitchesAndReplacements() throws Exception {
-        try (Session session = new Session(); var executor = Executors.newSingleThreadExecutor()) {
+    @ParameterizedTest
+    @EnumSource(BattleMode.class)
+    void playsACompleteSixAgainstSixBattleWithSwitchesAndReplacements(BattleMode mode) throws Exception {
+        try (Session session = new Session(mode); var executor = Executors.newSingleThreadExecutor()) {
             try {
                 View host = new View(Side.PLAYER);
                 var guest = executor.submit(() -> {
@@ -432,6 +460,10 @@ class NetworkBattleCoordinatorTest {
         private final NetworkBattleCoordinator coordinator;
 
         private Session() throws IOException {
+            this(BattleMode.RANDOM);
+        }
+
+        private Session(BattleMode mode) throws IOException {
             var drafter = new TeamDrafter(new InMemorySpeciesRepository(), new Random(50));
             Team host = drafter.randomTeam(List.of());
             Team guest = drafter.randomTeam(host.getFakemons().stream().map(Fakemon::getSpecies).toList());
@@ -445,7 +477,7 @@ class NetworkBattleCoordinatorTest {
                 client.setSoTimeout(5000);
                 remote = new NetworkConnection(client);
                 coordinator = new NetworkBattleCoordinator(new NetworkConnection(server.accept()),
-                        host, guest, new Random(50), hostMessages::add, failures::add);
+                        host, guest, mode, new Random(50), hostMessages::add, failures::add);
             }
         }
 

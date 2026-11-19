@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -29,6 +30,12 @@ final class TeamSelectionScreen extends BorderPane {
     private final Button confirm = new Button("Valider");
 
     TeamSelectionScreen(SpeciesRepository roster, SceneManager scenes, Runnable back, Runnable menu) {
+        this(roster, back, selected -> scenes.show(new BattleScreen(scenes,
+                BattleSetup.constructed(roster, selected, new Random()), menu)));
+    }
+
+    /** Réutilise la sélection du catalogue pour une préparation locale ou réseau. */
+    TeamSelectionScreen(SpeciesRepository roster, Runnable back, Consumer<List<Species>> onConfirm) {
         setPadding(new Insets(16));
         setStyle("-fx-background-color: #19233a;");
         Label title = new Label("Choisissez vos fakemon");
@@ -65,8 +72,7 @@ final class TeamSelectionScreen extends BorderPane {
         setCenter(scroll);
 
         confirm.setStyle("-fx-base: #f6c443; -fx-font-weight: bold;");
-        confirm.setOnAction(event -> scenes.show(new BattleScreen(scenes,
-                BattleSetup.constructed(roster, List.copyOf(selected), new Random()), menu)));
+        confirm.setOnAction(event -> onConfirm.accept(List.copyOf(selected)));
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Button backButton = new Button("Retour");

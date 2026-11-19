@@ -28,21 +28,41 @@ final class BattleSetup {
     }
 
     static BattleSetup constructed(SpeciesRepository roster, List<Species> selected, Random random) {
-        if (selected.size() != 6 || selected.stream().map(Species::getOriginalName).distinct().count() != 6
-                || !roster.findAll().containsAll(selected)) {
-            throw new IllegalArgumentException("Choisis six fakemon différents du catalogue.");
-        }
+        validateSelection(roster, selected);
         return new BattleSetup(roster, random, BattleMode.CONSTRUCTED,
                 new TeamDrafter(roster, random).buildTeam(selected));
     }
 
+    /** Construit les deux équipes validées par l'hôte, premiers combattants en tête. */
+    static BattleSetup networkConstructed(SpeciesRepository roster, List<Species> host, List<Species> guest,
+            Random random) {
+        validateSelection(roster, host);
+        validateSelection(roster, guest);
+        var drafter = new TeamDrafter(roster, random);
+        return new BattleSetup(roster, random, BattleMode.CONSTRUCTED,
+                drafter.buildTeam(host), drafter.buildTeam(guest));
+    }
+
+    private static void validateSelection(SpeciesRepository roster, List<Species> selected) {
+        if (selected.size() != 6 || selected.stream().map(Species::getOriginalName).distinct().count() != 6
+                || !roster.findAll().containsAll(selected)) {
+            throw new IllegalArgumentException("Choisis six fakemon différents du catalogue.");
+        }
+    }
+
     private BattleSetup(SpeciesRepository roster, Random random, BattleMode mode, Team chosen) {
+        this(roster, random, mode, chosen, null);
+    }
+
+    private BattleSetup(SpeciesRepository roster, Random random, BattleMode mode, Team chosen, Team chosenOpponent) {
         this.roster = roster;
         this.random = random;
         this.mode = mode;
         var drafter = new TeamDrafter(roster, random);
         player = chosen == null ? shuffled(drafter.randomTeam(List.of())) : chosen;
-        opponent = shuffled(drafter.randomTeam(player.getFakemons().stream().map(Fakemon::getSpecies).toList()));
+        opponent = chosenOpponent == null
+                ? shuffled(drafter.randomTeam(player.getFakemons().stream().map(Fakemon::getSpecies).toList()))
+                : chosenOpponent;
         for (Team team : List.of(player, opponent)) {
             for (Fakemon mon : team.getFakemons()) {
                 if (mon.getItem() == null) {
