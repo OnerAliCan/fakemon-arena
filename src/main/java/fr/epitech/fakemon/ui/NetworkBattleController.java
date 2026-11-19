@@ -14,6 +14,8 @@ import fr.epitech.fakemon.net.NetworkEventCodec;
 import fr.epitech.fakemon.net.NetworkGuestSession;
 import fr.epitech.fakemon.net.NetworkMessage;
 import fr.epitech.fakemon.net.NetworkTeamCodec;
+import fr.epitech.fakemon.data.JsonSpeciesRepository;
+import fr.epitech.fakemon.data.SpeciesFactory;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -37,16 +39,17 @@ final class NetworkBattleController implements AutoCloseable {
     private boolean finished;
     private boolean submitted;
     private boolean cancellable;
+    private boolean transferred;
 
     NetworkBattleController(NetworkConnection connection, BattleSetup setup) {
         localSide = setup == null ? Side.OPPONENT : Side.PLAYER;
         if (setup == null) {
             host = null;
-            guest = new NetworkGuestSession(connection, this::dispatch, this::dispatchFailure);
+            guest = new NetworkGuestSession(connection, this::dispatch, this::dispatchFailure, true);
         } else {
             guest = null;
             host = new NetworkBattleCoordinator(connection, setup.player, setup.opponent, setup.mode, new Random(),
-                    this::dispatch, this::dispatchFailure);
+                    this::dispatch, this::dispatchFailure, true);
         }
     }
 
@@ -65,6 +68,34 @@ final class NetworkBattleController implements AutoCloseable {
 
     BattleState getState() {
         return state;
+    }
+
+    /** Rouvre la préparation avec le même adversaire lorsque l'ancien lecteur a libéré la connexion. */
+    void rematch(SceneManager scenes, Runnable menu, Consumer<Throwable> onError) {
+        if (!finished || closed) {
+            onError.accept(new IllegalStateException("La connexion du combat n'est plus disponible."));
+            return;
+        }
+        var released = host == null ? guest.releaseConnection() : host.releaseConnection();
+        released.whenComplete((connection, error) -> Platform.runLater(() -> {
+            if (closed) {
+                return;
+            }
+            if (error != null) {
+                onError.accept(error);
+                return;
+            }
+            try {
+                var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
+                var preparation = new NetworkPreparationScreen(connection, host != null, roster, scenes, menu);
+                transferred = true;
+                scenes.show(preparation);
+            } catch (RuntimeException failure) {
+                transferred = false;
+                close();
+                onError.accept(failure);
+            }
+        }));
     }
 
     boolean canChoose() {
@@ -196,6 +227,9 @@ final class NetworkBattleController implements AutoCloseable {
     public void close() {
         if (!closed) {
             closed = true;
+            if (transferred) {
+                return;
+            }
             try {
                 if (host != null) {
                     host.close();

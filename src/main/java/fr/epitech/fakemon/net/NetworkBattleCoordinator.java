@@ -39,6 +39,8 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
     private final Team guestTeam;
     private final Random random;
     private final BattleMode mode;
+    private final boolean keepConnection;
+    private final CompletableFuture<NetworkConnection> released = new CompletableFuture<>();
     private final Consumer<NetworkMessage> onHostMessage;
     private final Consumer<Throwable> onFailure;
     private final DefaultBattleEngine engine = new DefaultBattleEngine();
@@ -89,11 +91,29 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
      */
     public NetworkBattleCoordinator(NetworkConnection connection, Team hostTeam, Team guestTeam, BattleMode mode,
             Random random, Consumer<NetworkMessage> onHostMessage, Consumer<Throwable> onFailure) {
+        this(connection, hostTeam, guestTeam, mode, random, onHostMessage, onFailure, false);
+    }
+
+    /**
+     * Prépare un combat pouvant céder sa connexion après le résultat.
+     * @param connection connexion avec l'invité
+     * @param hostTeam équipe de l'hôte, premier combattant en tête
+     * @param guestTeam équipe de l'invité, premier combattant en tête
+     * @param mode mode choisi dans le lobby
+     * @param random source de hasard du moteur
+     * @param onHostMessage reçoit les messages depuis un thread de travail
+     * @param onFailure reçoit les erreurs terminales
+     * @param keepConnection conserve la connexion pour une revanche après confirmation de fin
+     */
+    public NetworkBattleCoordinator(NetworkConnection connection, Team hostTeam, Team guestTeam, BattleMode mode,
+            Random random, Consumer<NetworkMessage> onHostMessage, Consumer<Throwable> onFailure,
+            boolean keepConnection) {
         this.connection = Objects.requireNonNull(connection);
         this.hostTeam = Objects.requireNonNull(hostTeam);
         this.guestTeam = Objects.requireNonNull(guestTeam);
         this.random = Objects.requireNonNull(random);
         this.mode = Objects.requireNonNull(mode);
+        this.keepConnection = keepConnection;
         this.onHostMessage = Objects.requireNonNull(onHostMessage);
         this.onFailure = Objects.requireNonNull(onFailure);
         events = new NetworkEventCodec(hostTeam, guestTeam, Side.PLAYER);
@@ -101,6 +121,11 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
                 () -> engine.getActiveFakemon(Side.OPPONENT), () -> finish(Side.PLAYER),
                 requestNumber::incrementAndGet);
         engine.addListener(this::publishEvent);
+    }
+
+    /** @return la connexion après confirmation du résultat par l'invité et arrêt de l'ancien lecteur */
+    public CompletableFuture<NetworkConnection> releaseConnection() {
+        return released.copy();
     }
 
     /** Envoie les équipes initiales, démarre le moteur et lance la lecture des réponses. */
@@ -281,7 +306,7 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         }
         requestChoices();
         if (finished.get()) {
-            stop();
+            stopAfterBattle();
         }
     }
 
@@ -395,9 +420,24 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         try {
             while (!closed.get()) {
                 NetworkMessage message = connection.receive();
+                if ("BATTLE_FINISHED".equals(message.getType())) {
+                    if (!keepConnection || !finished.get()) {
+                        throw new IOException("Confirmation de fin de combat inattendue.");
+                    }
+                    readerThread.shutdown();
+                    battleThread.shutdown();
+                    released.complete(connection);
+                    return;
+                }
+                if (keepConnection && finished.get()) {
+                    continue;
+                }
                 if (isGuestForfeit(message)) {
                     finish(Side.PLAYER);
-                    return;
+                    if (!keepConnection) {
+                        return;
+                    }
+                    continue;
                 }
                 if (guestNeedsReplacement && !"CANCEL_ACTION".equals(message.getType())) {
                     opponent.receiveAction(message);
@@ -414,7 +454,7 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
                 }
             }
         } catch (IOException | RuntimeException error) {
-            if (!closed.get() && !finished.get()) {
+            if (!closed.get() && (!finished.get() || keepConnection)) {
                 fail(error);
             }
         }
@@ -439,7 +479,7 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
             } catch (RuntimeException error) {
                 onFailure.accept(error);
             } finally {
-                stop();
+                stopAfterBattle();
             }
         }
     }
@@ -457,8 +497,15 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         if (closed.get()) {
             return;
         }
+        released.completeExceptionally(error);
         stop();
         onFailure.accept(error);
+    }
+
+    private void stopAfterBattle() {
+        if (!keepConnection) {
+            stop();
+        }
     }
 
     private void stop() {
@@ -473,6 +520,7 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
     @Override
     public void close() throws IOException {
         if (closed.compareAndSet(false, true)) {
+            released.completeExceptionally(new IOException("Le combat est fermé."));
             try {
                 opponent.close();
             } finally {
