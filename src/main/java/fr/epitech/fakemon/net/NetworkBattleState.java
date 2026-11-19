@@ -8,6 +8,9 @@ import fr.epitech.fakemon.core.api.HpLostEvent;
 import fr.epitech.fakemon.core.api.HpRestoredEvent;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
+import fr.epitech.fakemon.core.api.StatusAppliedEvent;
+import fr.epitech.fakemon.core.api.StatusRemovedEvent;
+import fr.epitech.fakemon.core.api.BattleEndedEvent;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Team;
 import java.util.Objects;
@@ -77,6 +80,21 @@ public final class NetworkBattleState implements BattleState {
                 throw new IllegalArgumentException("Le numéro du tour reçu est incohérent.");
             }
             turnNumber = started.getTurnNumber();
+        } else if (event instanceof StatusAppliedEvent applied) {
+            checkMember(applied.getSide(), applied.getFakemon());
+            if (!applied.getFakemon().applyStatus(applied.getStatus().create())) {
+                throw new IllegalArgumentException("Le statut reçu ne peut pas être appliqué au Fakemon.");
+            }
+        } else if (event instanceof StatusRemovedEvent removed) {
+            checkMember(removed.getSide(), removed.getFakemon());
+            var status = removed.getFakemon().getStatus();
+            if (status == null || status.getType() != removed.getStatus()) {
+                throw new IllegalArgumentException("La fin de statut reçue ne correspond pas au Fakemon.");
+            }
+            removed.getFakemon().clearStatus();
+        } else if (event instanceof BattleEndedEvent) {
+            playerTeam.getFakemons().forEach(Fakemon::clearStatus);
+            opponentTeam.getFakemons().forEach(Fakemon::clearStatus);
         }
     }
 

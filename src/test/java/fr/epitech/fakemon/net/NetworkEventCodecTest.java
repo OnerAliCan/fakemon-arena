@@ -26,6 +26,11 @@ import fr.epitech.fakemon.core.api.SelectionReason;
 import fr.epitech.fakemon.core.api.Side;
 import fr.epitech.fakemon.core.api.TalentActivatedEvent;
 import fr.epitech.fakemon.core.api.TurnStartedEvent;
+import fr.epitech.fakemon.core.api.StatusAppliedEvent;
+import fr.epitech.fakemon.core.api.StatusActivatedEvent;
+import fr.epitech.fakemon.core.api.AttackPreventedEvent;
+import fr.epitech.fakemon.core.api.StatusRemovedEvent;
+import fr.epitech.fakemon.core.model.StatusType;
 import fr.epitech.fakemon.core.model.BaseStats;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Item;
@@ -37,9 +42,47 @@ import fr.epitech.fakemon.core.model.Team;
 import fr.epitech.fakemon.core.model.Type;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /** Vérifie les événements reçus et l'adressage des demandes de sélection. */
 class NetworkEventCodecTest {
+    @ParameterizedTest
+    @EnumSource(value = StatusType.class, names = {"SLEEP", "CONFUSION"})
+    void aReceivedExpiryClearsTheStatusAndRejectsMismatchedOrRepeatedRemoval(StatusType status) {
+        var state = new NetworkBattleState(guest, host);
+        state.apply(guestCodec.decode(hostCodec.encode(
+                new StatusAppliedEvent(Side.PLAYER, hostMon, status))).orElseThrow());
+        var wrong = guestCodec.decode(hostCodec.encode(
+                new StatusRemovedEvent(Side.PLAYER, hostMon, StatusType.BURN))).orElseThrow();
+        assertThrows(IllegalArgumentException.class, () -> state.apply(wrong));
+        assertEquals(status, hostMon.getStatus().getType());
+        var wake = assertInstanceOf(StatusRemovedEvent.class, guestCodec.decode(hostCodec.encode(
+                new StatusRemovedEvent(Side.PLAYER, hostMon, status))).orElseThrow());
+        assertEquals(Side.OPPONENT, wake.getSide());
+        state.apply(wake);
+        assertEquals(null, hostMon.getStatus());
+        assertThrows(IllegalArgumentException.class, () -> state.apply(wake));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = StatusType.class, names = {"BURN", "POISON", "PARALYSIS", "SLEEP", "CONFUSION"})
+    void receivedStatusesUseTheLocalSideAndAreClearedWithTheResult(StatusType status) {
+        var state = new NetworkBattleState(guest, host);
+        var applied = assertInstanceOf(StatusAppliedEvent.class, guestCodec.decode(hostCodec.encode(
+                new StatusAppliedEvent(Side.PLAYER, hostMon, status))).orElseThrow());
+        assertEquals(Side.OPPONENT, applied.getSide());
+        assertSame(hostMon, applied.getFakemon());
+        state.apply(applied);
+        assertEquals(status, state.getTeam(Side.OPPONENT).getFakemons().getFirst().getStatus().getType());
+        assertEquals(status == StatusType.PARALYSIS ? 50 : 100, hostMon.getStats().getSpeed());
+        state.apply(new HpLostEvent(Side.OPPONENT, hostMon, 6, 94));
+        assertEquals(94, hostMon.getCurrentHp());
+        state.apply(new BattleEndedEvent(Side.PLAYER, BattleEndReason.FORFEIT));
+        assertEquals(null, hostMon.getStatus());
+        assertEquals(100, hostMon.getStats().getSpeed());
+    }
+
     private final Move move = new Move("Frappe", Type.FORCE, MoveCategory.PHYSICAL, 50, 100, 0);
     private final Fakemon hostMon = createFakemon("Hote");
     private final Fakemon guestMon = createFakemon("Invite");
@@ -189,6 +232,19 @@ class NetworkEventCodecTest {
                 new FakemonFaintedEvent(Side.OPPONENT, guestMon),
                 new ItemActivatedEvent(Side.PLAYER, hostMon, Item.PLUME),
                 new TalentActivatedEvent(Side.PLAYER, hostMon, Talent.FRACAS),
+                new StatusAppliedEvent(Side.PLAYER, hostMon, StatusType.BURN),
+                new StatusActivatedEvent(Side.PLAYER, hostMon, StatusType.BURN),
+                new StatusAppliedEvent(Side.OPPONENT, guestMon, StatusType.POISON),
+                new StatusActivatedEvent(Side.OPPONENT, guestMon, StatusType.POISON),
+                new StatusAppliedEvent(Side.PLAYER, hostMon, StatusType.PARALYSIS),
+                new AttackPreventedEvent(Side.PLAYER, hostMon, StatusType.PARALYSIS),
+                new StatusAppliedEvent(Side.OPPONENT, guestMon, StatusType.SLEEP),
+                new AttackPreventedEvent(Side.OPPONENT, guestMon, StatusType.SLEEP),
+                new StatusRemovedEvent(Side.OPPONENT, guestMon, StatusType.SLEEP),
+                new StatusAppliedEvent(Side.PLAYER, hostMon, StatusType.CONFUSION),
+                new AttackPreventedEvent(Side.PLAYER, hostMon, StatusType.CONFUSION),
+                new StatusActivatedEvent(Side.PLAYER, hostMon, StatusType.CONFUSION),
+                new StatusRemovedEvent(Side.PLAYER, hostMon, StatusType.CONFUSION),
                 new BattleEndedEvent(Side.PLAYER, BattleEndReason.ALL_FAINTED));
     }
 

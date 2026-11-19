@@ -27,6 +27,10 @@ package "core.api" {
     + onEvent(event : BattleEvent) : void
   }
   abstract class BattleEvent
+  class StatusAppliedEvent <<#32>>
+  class StatusActivatedEvent <<#32>>
+  class StatusRemovedEvent <<#32>>
+  class AttackPreventedEvent <<#32>>
   interface Opponent {
     + chooseAction(moveList, standingFakemonList) : PlayerAction
     + chooseFakemon(standingFakemonList) : PlayerAction
@@ -107,6 +111,9 @@ package "core.engine" {
     - resolveTurn(opponentAction, playerAction) : void
     - fasterSide() : Side
     - useMove(side, move) : void
+    - applyMoveStatus(side, target, move) : void
+    - applyEndOfTurnStatus(side) : void
+    - endBattle(winner, reason) : void
     - sendFakemon(side, fakemon) : void
     - checkCanEnter(side, fakemon) : void
     - otherSide(side) : Side
@@ -172,6 +179,7 @@ package "data" {
 
 package "core.effects" {
   abstract class Ability
+  abstract class Status
 }
 
 package "ui (Matteo)" {
@@ -187,6 +195,11 @@ DefaultBattleEngine --> "1" TypeChart
 DefaultBattleEngine --> "1" BattlePhase
 DefaultBattleEngine ..> BattleEvent : envoie
 DefaultBattleEngine ..> PlayerAction : reçoit
+StatusAppliedEvent --|> BattleEvent
+StatusActivatedEvent --|> BattleEvent
+StatusRemovedEvent --|> BattleEvent
+AttackPreventedEvent --|> BattleEvent
+DefaultBattleEngine ..> Status : avant l'attaque et en fin de tour
 
 DamageCalculator --> "1" TypeChart
 DamageCalculator --> "2" Ability : modifie les dégâts
@@ -215,6 +228,8 @@ legend bottom left
   <b>Factory (SpeciesFactory)</b> : crée les espèces et les attaques à partir du JSON, comme au jour 08.
   <b>Random</b> : le même sert à tous les tirages, pour qu'une graine fixée rende les tests reproductibles.
   <b>BattlePhase</b> : submitAction lève IllegalStateException si l'action ne correspond pas à la phase.
+  <b>Statuts (#32)</b> : l'état décide du blocage, des blessures ou des dégâts résiduels ; le moteur applique les PV, les K.O. et émet les événements.
+  <b>MoveCategory.STATUS</b> : aucun dégât direct, aucun critique ; précision puis application du statut.
   <b>TypeChart</b> renvoie Optional.empty() pour une efficacité normale de ×1.
   <b>Catalogue JSON</b> charge le roster intégré et les fichiers utilisateur. add valide la fiche et copie les médias avant la sauvegarde.
 endlegend

@@ -9,6 +9,7 @@ import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.model.MoveCategory;
 import fr.epitech.fakemon.core.model.Species;
 import fr.epitech.fakemon.core.model.Talent;
+import fr.epitech.fakemon.core.model.StatusType;
 import fr.epitech.fakemon.core.model.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,14 +33,36 @@ public class SpeciesFactory {
      */
     public Move createMove(JsonObject json) {
         String id = readString(json, "id");
-        return new Move(
-            readString(json, "name"),
-            readEnum(Type.class, json, "type", id),
-            readEnum(MoveCategory.class, json, "category", id),
-            readInt(json, "power", id),
-            readInt(json, "accuracy", id),
-            readInt(json, "priority", id)
-        );
+        try {
+            JsonElement effect = json.get("status");
+            String status = null;
+            if (effect != null && !effect.isJsonNull()) {
+                if (!effect.isJsonPrimitive() || !effect.getAsJsonPrimitive().isString()) {
+                    throw new IllegalArgumentException("Le statut doit être identifié par son nom.");
+                }
+                status = effect.getAsString();
+            }
+            int statusChance = 0;
+            if (json.has("statusChance")) {
+                JsonElement value = json.get("statusChance");
+                if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+                    throw new IllegalArgumentException("La chance de statut doit être un entier.");
+                }
+                statusChance = value.getAsBigDecimal().intValueExact();
+            }
+            return new Move(
+                readString(json, "name"),
+                readEnum(Type.class, json, "type", id),
+                readEnum(MoveCategory.class, json, "category", id),
+                readInt(json, "power", id),
+                readInt(json, "accuracy", id),
+                readInt(json, "priority", id),
+                status == null ? null : toEnum(StatusType.class, status, "status", id),
+                statusChance
+            );
+        } catch (IllegalArgumentException | ArithmeticException error) {
+            throw new InvalidSpeciesException(id + " : " + error.getMessage());
+        }
     }
 
     /**

@@ -89,7 +89,7 @@ Repères pour se souvenir de la table :
 
 ## 4. Attaques
 
-Chaque type a **3 attaques** : une rapide, une standard et une lourde. Soit **30 attaques**, sans effet secondaire (les statuts arrivent en bonus, #32).
+Chaque type a **3 attaques de base** : une rapide, une standard et une lourde. Ces **30 attaques** restent sans effet secondaire. Les statuts ajoutent deux attaques de Feu, deux attaques de Venin, deux attaques de Foudre, une attaque d'Éther et une attaque d'Ombre (#32), décrites dans la section 10.
 
 | Catégorie | Puissance | Précision | Priorité | Usage |
 |---|---|---|---|---|
@@ -117,7 +117,7 @@ Chaque attaque est aussi **physique** (P) ou **spéciale** (S) :
 
 Soit 14 attaques physiques et 16 spéciales. Roche et Force n'ont que des attaques physiques, Foudre et Ombre que des spéciales : chaque type a son style.
 
-**Attaques qu'un fakemon peut apprendre :** les 3 attaques de chacun de ses types. Un fakemon d'un seul type ajoute les 3 attaques d'un **type de couverture**, indiqué dans le roster. Chaque fakemon a donc 6 attaques possibles, et en reçoit 4 au tirage.
+**Attaques qu'un fakemon peut apprendre :** les 3 attaques de base de chacun de ses types. Un fakemon d'un seul type ajoute les 3 attaques de base d'un **type de couverture**, indiqué dans le roster. Chaque fakemon a donc 6 attaques possibles de base et en reçoit 4 au tirage. Les espèces qui disposent d'attaques de Feu, de Venin ou de Foudre peuvent aussi apprendre les deux nouvelles attaques de statut de ce type. Celles qui disposent d'attaques d'Éther peuvent aussi apprendre Berceuse ; celles qui disposent d'attaques d'Ombre peuvent apprendre Désorientation.
 
 ## 5. Formule de dégâts
 
@@ -166,7 +166,7 @@ Dans l'autre sens, la **Coulée ardente** de Pyrale (Feu, spéciale, 65, Attaque
    2. à priorité égale, la **Vitesse** la plus haute, objet compris ;
    3. en cas d'égalité parfaite, **pile ou face**.
 4. **Résolution de chaque attaque :** précision, puis dégâts. Si les PV tombent à 0, le fakemon est KO. Un fakemon KO avant d'avoir agi ne joue pas son action.
-5. **Fin de tour :** les talents de fin de tour s'appliquent (Récupération), le plus rapide d'abord.
+5. **Fin de tour :** les talents de fin de tour s'appliquent (Récupération), le plus rapide d'abord, puis les dégâts des statuts des deux Fakemon actifs.
 6. **Remplacements :** chaque camp dont le fakemon est KO en envoie un autre. Le joueur choisit dans le panneau d'équipe ; l'ordinateur prend le premier disponible. L'entrée en jeu déclenche les talents d'entrée (Fracas).
 7. **Fin du combat :** dès qu'un camp n'a plus de fakemon debout, l'autre camp gagne.
 
@@ -234,7 +234,34 @@ Le jeu affiche le **nom français**. Le nom d'origine sert d'identifiant et pour
 
 **Répartition :** chaque type apparaît chez 4 à 7 fakemon ; chaque talent chez 7 ou 8 fakemon. Les statistiques et les attaques précises de chaque fakemon sont saisies avec le dashboard (#23), en suivant la règle des 600 points.
 
-## 10. Questions ouvertes pour la review
+## 10. Statuts (#32)
+
+Un Fakemon ne peut porter qu'un statut à la fois : une nouvelle application ne remplace pas un statut existant. Le statut reste après un changement de Fakemon, sans agir sur le banc, et disparaît à la fin du combat, y compris après un abandon.
+
+La **brûlure** retire **1/16 des PV maximum** à la fin de chaque tour, arrondi à l'inférieur, avec un minimum de 1 PV et sans dépasser les PV restants. Elle peut mettre K.O. et déclencher un remplacement ou la fin du combat. Les Fakemon de type Feu sont immunisés.
+
+Le **poison** retire **1/8 des PV maximum** à la fin de chaque tour, arrondi à l'inférieur, avec un minimum de 1 PV et sans dépasser les PV restants. Les Fakemon de type Venin sont immunisés. Ses dégâts ne progressent pas d'un tour à l'autre. La persistance, les K.O. et la règle de non-cumul sont les mêmes que pour la brûlure.
+
+La **paralysie** divise la vitesse par deux, après le bonus de l'objet tenu, sans arrondir ni modifier les statistiques de l'espèce. À chaque tentative d'attaque, le Fakemon a **25 % de risque de ne pas pouvoir attaquer** ; le tirage se fait avant la précision. Les changements de Fakemon restent possibles. Les types Foudre et Roche sont immunisés. Elle ne retire pas de PV en fin de tour et suit la même persistance et la même règle de non-cumul que les autres statuts.
+
+Le **sommeil** bloque **1 à 3 tentatives d'attaque**, durée tirée avec le générateur du combat lors de la première tentative. À la tentative suivante, le Fakemon se réveille et peut exécuter son attaque. Le compteur ne progresse ni sur le banc ni lors d'un changement de Fakemon. Les dégâts ne réveillent pas le dormeur. Aucun type n'est immunisé. Un Fakemon déjà endormi ne peut pas recevoir un nouveau sommeil pour en prolonger la durée ; sa persistance et sa disparition à la fin du combat suivent la règle commune.
+
+La **confusion** dure **trois tentatives d'attaque**. À chaque tentative, le Fakemon a **une chance sur trois de se blesser au lieu d'attaquer** : il perd **1/8 de ses PV maximum**, arrondi à l'inférieur, avec un minimum de 1 PV, limité aux PV restants. Ces blessures peuvent mettre K.O. Elles ne dépendent ni des types ni des statistiques d'attaque et ne peuvent pas produire de critique. Le compteur avance aussi lorsque l'attaque est autorisée puis ratée ; il reste figé sur le banc et lors des changements. Aucun type n'est immunisé. Le statut disparaît après la troisième tentative, ou à la fin du combat. Un K.O. par confusion déclenche les remplacements habituels ; l'adversaire n'attaque pas une cible déjà K.O.
+
+| Attaque | Type | Catégorie | Puissance | Précision | Priorité | Statut | Chance |
+|---|---|---|---|---|---|---|---|
+| Braise tenace | Feu | Spéciale | 50 | 100 % | 0 | Brûlure | 20 % |
+| Marque ardente | Feu | Statut, sans dégâts directs | 0 | 100 % | 0 | Brûlure | 100 % |
+| Toxine | Venin | Spéciale | 50 | 100 % | 0 | Poison | 20 % |
+| Spores toxiques | Venin | Statut, sans dégâts directs | 0 | 100 % | 0 | Poison | 100 % |
+| Décharge statique | Foudre | Spéciale | 50 | 100 % | 0 | Paralysie | 20 % |
+| Cage électrique | Foudre | Statut, sans dégâts directs | 0 | 100 % | 0 | Paralysie | 100 % |
+| Berceuse | Éther | Statut, sans dégâts directs | 0 | 100 % | 0 | Sommeil | 100 % |
+| Désorientation | Ombre | Statut, sans dégâts directs | 0 | 100 % | 0 | Confusion | 100 % |
+
+Le statut n'est appliqué qu'après une attaque réussie et si la cible est encore debout. Marque ardente, Spores toxiques, Cage électrique, Berceuse et Désorientation n'utilisent pas la formule de dégâts : leur puissance nulle n'inflige pas les 2 dégâts de base et ne peut pas produire de critique.
+
+## 11. Questions ouvertes pour la review
 
 - La **Roche** est le type le plus courant (7 fakemon) et le plus fort en attaque : à surveiller en jouant.
 - La répartition **physique / spéciale** des attaques (section 4) : chaque type doit-il en avoir des deux ?

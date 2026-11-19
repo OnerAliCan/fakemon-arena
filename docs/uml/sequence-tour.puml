@@ -17,6 +17,8 @@ participant "DefaultBattleEngine" as Arbitre #DCE8F7
 participant "RandomOpponent" as IA #DCE8F7
 participant "DamageCalculator" as Calcul #DCE8F7
 participant "Fakemon cible" as Cible #DCE8F7
+participant "Fakemon attaquant" as Attaquant #DCE8F7
+participant "Status" as Statut #DCE8F7
 
 Joueur -> Ecran : attaque ou changement
 Ecran -> Ecran : verrouiller les commandes
@@ -40,16 +42,42 @@ opt un ou deux changements
 end
 Arbitre -> Arbitre : attaques par priorité, puis vitesse, puis hasard
 
-loop chaque attaque autorisée, avec un attaquant encore debout
+loop chaque attaque, tant que les deux Fakemon actifs sont debout
+  opt l'attaquant porte un statut
+    Arbitre -> Statut : preventsAttack(random)
+    Statut --> Arbitre : attaque autorisée ou empêchée
+  end
+  alt le statut empêche l'attaque
+    Arbitre -> Ecran : AttackPreventedEvent
+    opt blessure de confusion
+      Arbitre -> Ecran : StatusActivatedEvent
+      Arbitre -> Attaquant : takeDamage(blessure)
+      Arbitre -> Ecran : HpLostEvent
+      opt l'attaquant se met K.O.
+        Arbitre -> Ecran : FakemonFaintedEvent
+      end
+    end
+    opt le statut expire après cette tentative
+      Arbitre -> Attaquant : clearStatus()
+      Arbitre -> Ecran : StatusRemovedEvent
+    end
+  else attaque autorisée
+    opt réveil ou fin de confusion
+      Arbitre -> Attaquant : clearStatus()
+      Arbitre -> Ecran : StatusRemovedEvent
+    end
   Arbitre -> Ecran : MoveUsedEvent
   Arbitre -> Calcul : rollAccuracy(move)
   Calcul --> Arbitre : touché ou raté
   alt attaque ratée
     Arbitre -> Ecran : MoveMissedEvent
   else attaque réussie
+    alt attaque sans dégâts directs (STATUS)
+      Arbitre -> Arbitre : aucun calcul de dégâts ni critique
+    else attaque physique ou spéciale
     Arbitre -> Calcul : calculate(attacker, target, move)
     note right of Calcul
-      Utilise les statistiques avec l'objet tenu.
+      Utilise les statistiques avec l'objet tenu et le statut.
       Applique Dernier Souffle et Carapace.
     end note
     Calcul --> Arbitre : DamageResult
@@ -74,6 +102,15 @@ loop chaque attaque autorisée, avec un attaquant encore debout
         Arbitre -> Ecran : FakemonFaintedEvent
       end
     end
+    end
+    opt attaque avec statut, cible debout, sensible à l'effet et sans statut
+      Arbitre -> Arbitre : si chance inférieure à 100 %, tirer avec le Random du combat
+      opt application réussie
+        Arbitre -> Cible : applyStatus(nouvel état)
+        Arbitre -> Ecran : StatusAppliedEvent
+      end
+    end
+  end
   end
 end
 
@@ -83,9 +120,22 @@ opt Récupération rend des PV
   Arbitre -> Ecran : HpRestoredEvent
 end
 
+loop chaque Fakemon actif encore debout avec brûlure ou poison
+  Arbitre -> Statut : endOfTurnDamage(holder)
+  Statut --> Arbitre : perte de PV
+  Arbitre -> Ecran : StatusActivatedEvent
+  Arbitre -> Arbitre : retirer les PV au porteur du statut
+  Arbitre -> Ecran : HpLostEvent
+  opt le porteur tombe K.O.
+    Arbitre -> Ecran : FakemonFaintedEvent
+  end
+end
+
 alt le joueur n'a plus de Fakemon debout
+  Arbitre -> Arbitre : nettoyer les statuts des deux équipes
   Arbitre -> Ecran : BattleEndedEvent(OPPONENT, ALL_FAINTED)
 else l'IA n'a plus de Fakemon debout
+  Arbitre -> Arbitre : nettoyer les statuts des deux équipes
   Arbitre -> Ecran : BattleEndedEvent(PLAYER, ALL_FAINTED)
 else le Fakemon actif du joueur est K.O.
   Arbitre -> Ecran : FakemonSelectionRequiredEvent(REPLACEMENT)
@@ -115,5 +165,7 @@ legend bottom left
   Les événements sont mis en file par l'écran pendant submitAction.
   Un abandon en attente d'action émet BattleEndedEvent(OPPONENT, FORFEIT).
   Les changements simultanés sont appliqués successivement dans l'ordre de vitesse.
+  Les compteurs de sommeil et confusion avancent uniquement lors d'une tentative d'attaque.
+  Un K.O. par confusion empêche la seconde attaque de viser le Fakemon déjà K.O.
 endlegend
 @enduml

@@ -2,7 +2,7 @@ package fr.epitech.fakemon.core.effects;
 
 import fr.epitech.fakemon.core.model.Stats;
 
-/** Décore les statistiques de base avec les bonus d'un objet tenu. */
+/** Décore les statistiques avec des coefficients d'attaque, de défense et de vitesse. */
 public final class ItemStats implements Stats {
     private final Stats base;
     private final double attack;
@@ -10,7 +10,7 @@ public final class ItemStats implements Stats {
     private final double speed;
 
     /**
-     * Prépare les coefficients de l'objet.
+     * Prépare les coefficients à appliquer sans modifier les statistiques reçues.
      *
      * @param base les statistiques à décorer
      * @param attack le coefficient des deux statistiques d'attaque

@@ -28,6 +28,28 @@
       "priority": 0
     },
     {
+      "id": "braise-tenace",
+      "name": "Braise tenace",
+      "type": "FIRE",
+      "category": "SPECIAL",
+      "power": 50,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "BURN",
+      "statusChance": 20
+    },
+    {
+      "id": "marque-ardente",
+      "name": "Marque ardente",
+      "type": "FIRE",
+      "category": "STATUS",
+      "power": 0,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "BURN",
+      "statusChance": 100
+    },
+    {
       "id": "embrun",
       "name": "Embrun",
       "type": "WATER",
@@ -107,6 +129,28 @@
       "power": 95,
       "accuracy": 80,
       "priority": 0
+    },
+    {
+      "id": "decharge-statique",
+      "name": "Décharge statique",
+      "type": "LIGHTNING",
+      "category": "SPECIAL",
+      "power": 50,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "PARALYSIS",
+      "statusChance": 20
+    },
+    {
+      "id": "cage-electrique",
+      "name": "Cage électrique",
+      "type": "LIGHTNING",
+      "category": "STATUS",
+      "power": 0,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "PARALYSIS",
+      "statusChance": 100
     },
     {
       "id": "gravillon",
@@ -190,6 +234,28 @@
       "priority": 0
     },
     {
+      "id": "toxine",
+      "name": "Toxine",
+      "type": "VENOM",
+      "category": "SPECIAL",
+      "power": 50,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "POISON",
+      "statusChance": 20
+    },
+    {
+      "id": "spores-toxiques",
+      "name": "Spores toxiques",
+      "type": "VENOM",
+      "category": "STATUS",
+      "power": 0,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "POISON",
+      "statusChance": 100
+    },
+    {
       "id": "coup-sec",
       "name": "Coup sec",
       "type": "FORCE",
@@ -217,6 +283,17 @@
       "priority": 0
     },
     {
+      "id": "desorientation",
+      "name": "Désorientation",
+      "type": "SHADOW",
+      "category": "STATUS",
+      "power": 0,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "CONFUSION",
+      "statusChance": 100
+    },
+    {
       "id": "murmure",
       "name": "Murmure",
       "type": "SHADOW",
@@ -242,6 +319,17 @@
       "power": 95,
       "accuracy": 80,
       "priority": 0
+    },
+    {
+      "id": "berceuse",
+      "name": "Berceuse",
+      "type": "ETHER",
+      "category": "STATUS",
+      "power": 0,
+      "accuracy": 100,
+      "priority": 0,
+      "status": "SLEEP",
+      "statusChance": 100
     },
     {
       "id": "lueur",
@@ -296,7 +384,9 @@
         "nuee-venimeuse",
         "gravillon",
         "coup-de-moellon",
-        "faille-tellurique"
+        "faille-tellurique",
+        "toxine",
+        "spores-toxiques"
       ],
       "concept": "Tarentule-cadran solaire, gardienne du temps",
       "sprites": {
@@ -328,7 +418,9 @@
         "nuee-venimeuse",
         "coup-sec",
         "crochet",
-        "coup-de-massue"
+        "coup-de-massue",
+        "toxine",
+        "spores-toxiques"
       ],
       "concept": "Araignée boxeuse, inspirée de Rocky",
       "sprites": {
@@ -359,7 +451,9 @@
         "eclipse",
         "lueur",
         "onde-mentale",
-        "comete"
+        "comete",
+        "berceuse",
+        "desorientation"
       ],
       "concept": "Renard des rêves, qui rôde la nuit",
       "sprites": {
@@ -391,7 +485,8 @@
         "eclipse",
         "coup-sec",
         "crochet",
-        "coup-de-massue"
+        "coup-de-massue",
+        "desorientation"
       ],
       "concept": "Lézard voyou au gros poing",
       "sprites": {
@@ -423,7 +518,8 @@
         "eclipse",
         "embrun",
         "ressac",
-        "lame-de-fond"
+        "lame-de-fond",
+        "desorientation"
       ],
       "concept": "Sorcière des mers, entre Némésis et la méduse",
       "sprites": {
@@ -455,7 +551,11 @@
         "fournaise",
         "aiguillon",
         "crachat-acide",
-        "nuee-venimeuse"
+        "nuee-venimeuse",
+        "braise-tenace",
+        "marque-ardente",
+        "toxine",
+        "spores-toxiques"
       ],
       "concept": "Papillon de nuit qu'on croyait né des flammes",
       "sprites": {
@@ -486,7 +586,9 @@
         "orage-sec",
         "coup-sec",
         "crochet",
-        "coup-de-massue"
+        "coup-de-massue",
+        "decharge-statique",
+        "cage-electrique"
       ],
       "concept": "Lapin-dynamo rose, toujours chargé",
       "sprites": {
@@ -518,7 +620,9 @@
         "fournaise",
         "courant-d-air",
         "bourrasque",
-        "cyclone"
+        "cyclone",
+        "braise-tenace",
+        "marque-ardente"
       ],
       "concept": "Chauve-souris de cheminée, couverte de suie",
       "sprites": {
@@ -582,7 +686,10 @@
         "nuee-venimeuse",
         "murmure",
         "voile-noir",
-        "eclipse"
+        "eclipse",
+        "toxine",
+        "spores-toxiques",
+        "desorientation"
       ],
       "concept": "Bonbon gluant sorti d'une marmite maudite",
       "sprites": {
@@ -613,7 +720,8 @@
         "comete",
         "courant-d-air",
         "bourrasque",
-        "cyclone"
+        "cyclone",
+        "berceuse"
       ],
       "concept": "Pouf capitonné extravagant, toujours en fête",
       "sprites": {
@@ -645,7 +753,11 @@
         "fournaise",
         "gresillement",
         "arc-electrique",
-        "orage-sec"
+        "orage-sec",
+        "braise-tenace",
+        "marque-ardente",
+        "decharge-statique",
+        "cage-electrique"
       ],
       "concept": "Braise de décembre, incandescente, qui crache des cendres",
       "sprites": {
@@ -677,7 +789,9 @@
         "faille-tellurique",
         "aiguillon",
         "crachat-acide",
-        "nuee-venimeuse"
+        "nuee-venimeuse",
+        "toxine",
+        "spores-toxiques"
       ],
       "concept": "Crocodile couvert d'excroissances toxiques",
       "sprites": {
@@ -773,7 +887,8 @@
         "grande-floraison",
         "lueur",
         "onde-mentale",
-        "comete"
+        "comete",
+        "berceuse"
       ],
       "concept": "Demoiselle en robe de pétales de primevère",
       "sprites": {
@@ -805,7 +920,10 @@
         "eclipse",
         "gresillement",
         "arc-electrique",
-        "orage-sec"
+        "orage-sec",
+        "decharge-statique",
+        "cage-electrique",
+        "desorientation"
       ],
       "concept": "Spectre des rayons X, né d'une radiographie",
       "sprites": {
@@ -837,7 +955,8 @@
         "faille-tellurique",
         "lueur",
         "onde-mentale",
-        "comete"
+        "comete",
+        "berceuse"
       ],
       "concept": "Rocher-champignon sculpté par le vent pendant mille ans",
       "sprites": {
@@ -964,7 +1083,9 @@
         "fournaise",
         "gravillon",
         "coup-de-moellon",
-        "faille-tellurique"
+        "faille-tellurique",
+        "braise-tenace",
+        "marque-ardente"
       ],
       "concept": "Dragon-lézard de lave, forgeron des volcans",
       "sprites": {
@@ -996,7 +1117,8 @@
         "comete",
         "courant-d-air",
         "bourrasque",
-        "cyclone"
+        "cyclone",
+        "berceuse"
       ],
       "concept": "Nymphe espiègle aux cornes de diablesse",
       "sprites": {
@@ -1028,7 +1150,8 @@
         "eclipse",
         "courant-d-air",
         "bourrasque",
-        "cyclone"
+        "cyclone",
+        "desorientation"
       ],
       "concept": "Passereau gardien de l'entrée des Enfers",
       "sprites": {
@@ -1059,7 +1182,8 @@
         "lame-de-fond",
         "murmure",
         "voile-noir",
-        "eclipse"
+        "eclipse",
+        "desorientation"
       ],
       "concept": "Félin du déluge, rapide sous la pluie",
       "sprites": {
@@ -1091,7 +1215,10 @@
         "orage-sec",
         "lueur",
         "onde-mentale",
-        "comete"
+        "comete",
+        "decharge-statique",
+        "cage-electrique",
+        "berceuse"
       ],
       "concept": "Créature de lumière poussée au maximum",
       "sprites": {
@@ -1123,7 +1250,10 @@
         "comete",
         "tison",
         "coulee-ardente",
-        "fournaise"
+        "fournaise",
+        "braise-tenace",
+        "marque-ardente",
+        "berceuse"
       ],
       "concept": "Mentaliste aux effluves de flamme",
       "sprites": {
@@ -1217,7 +1347,8 @@
         "cyclone",
         "murmure",
         "voile-noir",
-        "eclipse"
+        "eclipse",
+        "desorientation"
       ],
       "concept": "Oiseau voleur, qui chaparde tout ce qui brille",
       "sprites": {
