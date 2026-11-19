@@ -26,6 +26,7 @@ import fr.epitech.fakemon.core.api.TurnStartedEvent;
 import fr.epitech.fakemon.core.api.UseMove;
 import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
 import fr.epitech.fakemon.core.model.Fakemon;
+import fr.epitech.fakemon.core.model.Item;
 import javafx.animation.PauseTransition;
 import javafx.animation.Animation;
 import javafx.geometry.Insets;
@@ -202,16 +203,25 @@ public final class BattleScreen extends BorderPane implements BattleListener {
 
     private void renderNext() {
         if (events.isEmpty()) {
+            player.hideActivation();
+            opponent.hideActivation();
             if (view == View.RESOLVING) {
                 ready();
             }
             return;
         }
+        player.hideActivation();
+        opponent.hideActivation();
+        eventDelay.setDuration(Duration.millis(110));
         events.removeFirst().run();
         if (!events.isEmpty()) {
             eventDelay.playFromStart();
         } else if (view == View.RESOLVING) {
-            ready();
+            if (player.activation.isVisible() || opponent.activation.isVisible()) {
+                eventDelay.playFromStart();
+            } else {
+                ready();
+            }
         }
     }
 
@@ -224,9 +234,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         if (event instanceof FakemonEnteredEvent entered) {
             Fakemon mon = entered.getFakemon();
             int hp = mon.getCurrentHp();
+            Item item = mon.getItem();
             events.add(() -> {
-                panel(entered.getSide()).show(mon, hp,
-                        mon.getItem() == null ? "Aucun" : mon.getItem().getDisplayName());
+                panel(entered.getSide()).show(mon, hp, item);
                 appendLog(name(mon) + " entre en jeu.");
             });
         } else {
@@ -258,14 +268,15 @@ public final class BattleScreen extends BorderPane implements BattleListener {
                 case NO_EFFECT -> "L'attaque n'a aucun effet.";
             });
         } else if (event instanceof ItemActivatedEvent activated) {
-            appendLog(name(activated.getFakemon()) + " bénéficie de " + activated.getItem().getDisplayName() + ".");
+            String text = name(activated.getFakemon()) + " bénéficie de " + activated.getItem().getDisplayName() + ".";
+            panel(activated.getSide()).activate("Objet : " + activated.getItem().getDisplayName(),
+                    name(activated.getFakemon()), activated.getItem());
+            eventDelay.setDuration(Duration.millis(850));
+            appendLog(text);
         } else if (event instanceof TalentActivatedEvent activated) {
-            String talentName = switch (activated.getTalent()) {
-                case CARAPACE -> "Carapace";
-                case DERNIER_SOUFFLE -> "Dernier Souffle";
-                case FRACAS -> "Fracas";
-                case RECUPERATION -> "Récupération";
-            };
+            String talentName = BattleBadges.talentName(activated.getTalent());
+            panel(activated.getSide()).activate("Talent : " + talentName, name(activated.getFakemon()), null);
+            eventDelay.setDuration(Duration.millis(850));
             appendLog(name(activated.getFakemon()) + " active " + talentName + " !");
         } else if (event instanceof FakemonFaintedEvent fainted) {
             appendLog(name(fainted.getFakemon()) + " est K.O.");
@@ -368,6 +379,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         private final boolean back;
         private final ProgressBar bar = new ProgressBar();
         private final Label hp = new Label();
+        private final VBox activation = new VBox(2);
 
         FighterPanel(boolean back) {
             super(4);
@@ -375,13 +387,37 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             setMaxSize(240, Region.USE_PREF_SIZE);
             bar.setPrefSize(200, 18);
             bar.setMinHeight(18);
+            activation.setId(back ? "player-activation" : "opponent-activation");
+            activation.setStyle("-fx-background-color: #262b45; -fx-background-radius: 6;"
+                    + "-fx-padding: 8; -fx-border-color: #f6c443; -fx-border-radius: 6;");
+            hideActivation();
         }
 
-        void show(Fakemon mon, int currentHp, String item) {
+        void activate(String title, String owner, Item item) {
+            Label heading = new Label(title);
+            heading.setWrapText(true);
+            heading.setStyle("-fx-text-fill: #f6c443; -fx-font-weight: bold;");
+            if (item != null) {
+                heading.setGraphic(BattleBadges.itemIcon(item));
+            }
+            Label name = new Label(owner + (back ? " · Votre camp" : " · Adversaire"));
+            name.setStyle("-fx-text-fill: #fff5dd;");
+            activation.getChildren().setAll(heading, name);
+            activation.setVisible(true);
+            activation.setManaged(true);
+            activation.setAccessibleText(owner + " : " + title);
+        }
+
+        void hideActivation() {
+            activation.setVisible(false);
+            activation.setManaged(false);
+        }
+
+        void show(Fakemon mon, int currentHp, Item item) {
             Label name = new Label(BattleScreen.name(mon));
             name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
             getChildren().setAll(name, new Label("Types : " + mon.getSpecies().getTypes()),
-                    new Label("Objet : " + item), bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104));
+                    BattleBadges.itemLabel(item), bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104), activation);
             health(currentHp, mon.getMaxHp());
         }
 
