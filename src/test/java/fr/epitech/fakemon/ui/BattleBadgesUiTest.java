@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import fr.epitech.fakemon.core.api.BattleEvent;
 import fr.epitech.fakemon.core.api.ItemActivatedEvent;
@@ -16,7 +14,6 @@ import fr.epitech.fakemon.core.model.Item;
 import fr.epitech.fakemon.core.model.Talent;
 import fr.epitech.fakemon.data.JsonSpeciesRepository;
 import fr.epitech.fakemon.data.SpeciesFactory;
-import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import org.junit.jupiter.api.Test;
@@ -30,11 +27,10 @@ class BattleBadgesUiTest {
 
     @Test
     void bannersIdentifyBothSidesAndClearAfterTheirDisplay() throws Exception {
-        var done = new CompletableFuture<Void>();
-        Platform.startup(() -> {
+        FxTestSupport.run(() -> {
+            var scenes = new SceneManager(new Scene(new StackPane(), 960, 540));
             try {
                 var setup = BattleSetup.random(new JsonSpeciesRepository(new SpeciesFactory(), userFolder), new Random(29));
-                var scenes = new SceneManager(new Scene(new StackPane(), 960, 540));
                 var screen = new BattleScreen(scenes, setup, () -> {});
                 screen.applyCss();
                 var render = BattleScreen.class.getDeclaredMethod("render", BattleEvent.class);
@@ -58,15 +54,10 @@ class BattleBadgesUiTest {
                 next.invoke(screen);
                 assertFalse(screen.lookup("#player-activation").isVisible());
                 assertFalse(screen.lookup("#opponent-activation").isVisible());
-                done.complete(null);
-            } catch (Throwable error) {
-                done.completeExceptionally(error);
+            } finally {
+                scenes.show(new StackPane());
             }
+            return null;
         });
-        try {
-            done.get(20, TimeUnit.SECONDS);
-        } finally {
-            Platform.exit();
-        }
     }
 }

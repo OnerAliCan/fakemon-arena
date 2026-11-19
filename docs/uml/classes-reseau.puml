@@ -65,6 +65,18 @@ class NetworkGuestSession {
   + cancelAction(requestId) : CompletableFuture<Void>
   + close()
 }
+class NetworkPreparationSession {
+  + startMonitoring(onFailure)
+  + awaitReady()
+  + ready()
+  + start(mode)
+  + awaitStart() : BattleMode
+  + sendSelection(names)
+  + receiveSelection() : List<String>
+  + finish()
+  + close()
+}
+class NetworkPreparationScreen
 class NetworkBattleState {
   + getTeam(side) : Team
   + getActiveFakemon(side) : Fakemon
@@ -102,7 +114,15 @@ NetworkBattleController --> NetworkEventCodec
 BattleScreen --> NetworkBattleController
 NetworkLobbyScreen ..> NetworkHost
 NetworkLobbyScreen ..> NetworkClient
-NetworkLobbyScreen ..> NetworkBattleController
+NetworkLobbyScreen ..> NetworkPreparationScreen
+NetworkPreparationScreen *-- NetworkPreparationSession
+NetworkPreparationScreen ..> NetworkBattleController : transfère la connexion
+NetworkPreparationSession --> NetworkConnection
+note right of NetworkPreparationSession
+  Lit en continu pendant la préparation.
+  PREPARATION_END puis PREPARATION_ACK
+  arrêtent les lecteurs avant le combat.
+end note
 StatusAppliedEvent --|> BattleEvent
 StatusActivatedEvent --|> BattleEvent
 StatusRemovedEvent --|> BattleEvent

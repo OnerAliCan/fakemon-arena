@@ -6,6 +6,7 @@ import fr.epitech.fakemon.core.engine.TeamDrafter;
 import fr.epitech.fakemon.core.model.Species;
 import fr.epitech.fakemon.net.NetworkConnection;
 import fr.epitech.fakemon.net.NetworkPreparationSession;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.concurrent.Executors;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
@@ -71,6 +73,7 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
         Label title = new Label("Préparation du combat en LAN");
         title.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
         getChildren().add(title);
+        session.startMonitoring(error -> update(() -> fail(error)));
 
         if (hosting) {
             ToggleGroup mode = new ToggleGroup();
@@ -119,7 +122,7 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
 
     private void prepare(BattleMode mode) {
         if (mode == BattleMode.RANDOM) {
-            launch(hosting ? BattleSetup.random(roster, new Random()) : null);
+            work(() -> finishPreparation(hosting ? BattleSetup.random(roster, new Random()) : null));
             return;
         }
         var selection = new TeamSelectionScreen(roster, () -> {
@@ -151,12 +154,17 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
                         .orElseThrow(() -> new IllegalArgumentException("Espèce absente du catalogue de l'hôte : " + name)))
                         .toList();
                 var setup = BattleSetup.networkConstructed(roster, selected, guest, new Random());
-                update(() -> launch(setup));
+                finishPreparation(setup);
             } else {
                 session.sendSelection(selected.stream().map(Species::getOriginalName).toList());
-                update(() -> launch(null));
+                finishPreparation(null);
             }
         });
+    }
+
+    private void finishPreparation(BattleSetup setup) throws IOException {
+        session.finish();
+        update(() -> launch(setup));
     }
 
     private void launch(BattleSetup setup) {
@@ -196,8 +204,21 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
 
     private void fail(Throwable error) {
         close();
-        status.setText("Préparation interrompue. " + error.getMessage());
+        String message = error instanceof EOFException
+                ? hosting ? "L'invité a quitté le lobby." : "L'hôte a quitté la partie."
+                : "Préparation interrompue. " + error.getMessage();
+        status.setText(message);
         getChildren().setAll(status, back);
+        if (!hosting) {
+            var owner = getScene() == null ? null : getScene().getWindow();
+            menu.run();
+            Alert notification = new Alert(Alert.AlertType.INFORMATION);
+            notification.setTitle("Combat en LAN");
+            notification.setHeaderText("Préparation interrompue");
+            notification.setContentText(message);
+            notification.initOwner(owner);
+            notification.show();
+        }
     }
 
     /** Ferme la connexion et interrompt l'attente lorsque le joueur quitte la préparation. */
@@ -207,7 +228,7 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
             closed = true;
             worker.shutdownNow();
             try {
-                connection.close();
+                session.close();
             } catch (IOException error) {
                 status.setText("Impossible de fermer la connexion. " + error.getMessage());
             }
