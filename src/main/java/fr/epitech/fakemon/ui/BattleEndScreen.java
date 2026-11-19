@@ -15,6 +15,8 @@ import javafx.scene.layout.VBox;
 
 /** Résultat du combat, équipe du joueur et choix entre revanche et menu. */
 public final class BattleEndScreen extends VBox {
+    private final HBox actions = new HBox(16);
+    private final Label replayStatus = new Label();
     /**
      * Construit le bilan sans décider elle-même comment créer la prochaine partie.
      * @param winner camp vainqueur
@@ -55,15 +57,35 @@ public final class BattleEndScreen extends VBox {
         }
         Button menuButton = new Button("Menu");
         menuButton.setOnAction(event -> menu.run());
-        HBox actions = new HBox(16);
         if (replay != null) {
-            Button replayButton = new Button("Revanche");
-            replayButton.setOnAction(event -> replay.run());
-            actions.getChildren().add(replayButton);
+            offerReplay(replay);
         }
         actions.getChildren().add(menuButton);
         actions.setAlignment(Pos.CENTER);
         getChildren().addAll(title, turnLabel, reasonLabel, new Label("Votre équipe"), teamRow,
-                actions);
+                actions, replayStatus);
+        replayStatus.setWrapText(true);
+        replayStatus.setVisible(false);
+        replayStatus.setManaged(false);
+    }
+
+    /** Ajoute une proposition de revanche et empêche les demandes répétées. */
+    void offerReplay(Runnable replay) {
+        Button replayButton = new Button("Revanche");
+        replayButton.setOnAction(event -> {
+            replayButton.setDisable(true);
+            replayStatus.setText("Préparation de la revanche…");
+            replayStatus.setVisible(true);
+            replayStatus.setManaged(true);
+            replay.run();
+        });
+        actions.getChildren().addFirst(replayButton);
+    }
+
+    /** Affiche l'impossibilité de rejouer, en laissant le retour au menu disponible. */
+    void replayFailed(Throwable error) {
+        replayStatus.setText("Revanche impossible. " + error.getMessage());
+        replayStatus.setVisible(true);
+        replayStatus.setManaged(true);
     }
 }

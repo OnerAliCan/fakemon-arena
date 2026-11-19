@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 
 import fr.epitech.fakemon.core.api.BattleEndReason;
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
+import fr.epitech.fakemon.core.api.BattleMode;
 import fr.epitech.fakemon.core.api.Forfeit;
 import fr.epitech.fakemon.core.api.PlayerAction;
 import fr.epitech.fakemon.core.api.SendFakemon;
@@ -34,9 +35,160 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /** Exerce le moteur hébergé avec un invité relié par un socket TCP local. */
 class NetworkBattleCoordinatorTest {
+    @ParameterizedTest
+    @EnumSource(BattleMode.class)
+    void aFullBattleCanBeFollowedByPreparationAndAnotherBattleOnTheSameConnection(BattleMode mode) throws Exception {
+        try (Session session = new Session(mode, true);
+                NetworkGuestSession firstGuest = automaticGuest(session.remote, session.failures, true)) {
+            firstGuest.start();
+            session.coordinator.start();
+            View first = playToEnd(session.coordinator, session.hostMessages, session.failures);
+            assertEquals(BattleEndReason.ALL_FAINTED, first.ended.getReason());
+            NetworkConnection hostConnection = session.coordinator.releaseConnection().get(2, TimeUnit.SECONDS);
+            NetworkConnection guestConnection = firstGuest.releaseConnection().get(2, TimeUnit.SECONDS);
+            assertSame(session.remote, guestConnection);
+
+            var hostPreparation = new NetworkPreparationSession(hostConnection, true);
+            var guestPreparation = new NetworkPreparationSession(guestConnection, false);
+            guestPreparation.ready();
+            hostPreparation.awaitReady();
+            hostPreparation.start(mode);
+            assertEquals(mode, guestPreparation.awaitStart());
+            if (mode == BattleMode.CONSTRUCTED) {
+                var names = new InMemorySpeciesRepository().findAll().subList(0, 6).stream()
+                        .map(species -> species.getOriginalName()).toList();
+                guestPreparation.sendSelection(names);
+                assertEquals(names, hostPreparation.receiveSelection());
+            }
+
+            var drafter = new TeamDrafter(new InMemorySpeciesRepository(), new Random(71));
+            Team hostTeam = drafter.randomTeam(List.of());
+            Team guestTeam = drafter.randomTeam(hostTeam.getFakemons().stream().map(Fakemon::getSpecies).toList());
+            try (var second = new NetworkBattleCoordinator(hostConnection, hostTeam, guestTeam, mode, new Random(71),
+                        session.hostMessages::add, session.failures::add);
+                    var secondGuest = automaticGuest(guestConnection, session.failures, false)) {
+                secondGuest.start();
+                second.start();
+                View replay = playToEnd(second, session.hostMessages, session.failures);
+                assertEquals(BattleEndReason.ALL_FAINTED, replay.ended.getReason());
+                assertTrue(session.failures.isEmpty(), session.failures.toString());
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(Side.class)
+    void eitherPlayerCanForfeitAndStillReleaseTheConnectionForRematch(Side forfeiting) throws Exception {
+        try (Session session = new Session(BattleMode.RANDOM, true)) {
+            var messages = new LinkedBlockingQueue<NetworkMessage>();
+            try (var guest = new NetworkGuestSession(session.remote, messages::add, session.failures::add, true)) {
+                guest.start();
+                session.coordinator.start();
+                View hostView = new View(Side.PLAYER);
+                View guestView = new View(Side.OPPONENT);
+                NetworkMessage hostRequest = session.nextRequest(hostView);
+                NetworkMessage guestRequest = nextMessage(messages, guestView, "ACTION_REQUIRED", null);
+                if (forfeiting == Side.PLAYER) {
+                    session.coordinator.submitHostAction(hostView.forfeit(hostRequest)).get(2, TimeUnit.SECONDS);
+                } else {
+                    guest.submitAction(guestView.forfeit(guestRequest)).get(2, TimeUnit.SECONDS);
+                }
+                NetworkConnection hostConnection = session.coordinator.releaseConnection().get(2, TimeUnit.SECONDS);
+                NetworkConnection guestConnection = guest.releaseConnection().get(2, TimeUnit.SECONDS);
+                assertThrows(ExecutionException.class,
+                        () -> guest.submitAction(guestView.forfeit(guestRequest)).get(2, TimeUnit.SECONDS));
+                var hostPreparation = new NetworkPreparationSession(hostConnection, true);
+                var guestPreparation = new NetworkPreparationSession(guestConnection, false);
+                guestPreparation.ready();
+                hostPreparation.awaitReady();
+                assertTrue(session.failures.isEmpty(), session.failures.toString());
+            }
+        }
+    }
+
+    @Test
+    void aPrematureEndAcknowledgementFailsInsteadOfReleasingTheConnection() throws Exception {
+        try (Session session = new Session(BattleMode.RANDOM, true)) {
+            session.coordinator.start();
+            session.remote.send(new NetworkMessage("BATTLE_FINISHED", new JsonObject()));
+            assertThrows(ExecutionException.class,
+                    () -> session.coordinator.releaseConnection().get(2, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    void leavingBeforeEndAcknowledgementCancelsRematch() throws Exception {
+        try (Session session = new Session(BattleMode.RANDOM, true)) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            NetworkMessage request = session.nextRequest(host);
+            session.coordinator.submitHostAction(host.forfeit(request)).get(2, TimeUnit.SECONDS);
+            session.remote.close();
+            assertThrows(ExecutionException.class,
+                    () -> session.coordinator.releaseConnection().get(2, TimeUnit.SECONDS));
+        }
+    }
+
+    private static NetworkGuestSession automaticGuest(NetworkConnection connection,
+            BlockingQueue<Throwable> failures, boolean keepConnection) {
+        View view = new View(Side.OPPONENT);
+        NetworkGuestSession[] session = new NetworkGuestSession[1];
+        session[0] = new NetworkGuestSession(connection, message -> {
+            view.accept(message);
+            if ("ACTION_REQUIRED".equals(message.getType())) {
+                session[0].submitAction(view.reply(message)).whenComplete((ignored, error) -> {
+                    if (error != null) {
+                        failures.add(error);
+                    }
+                });
+            }
+        }, failures::add, keepConnection);
+        return session[0];
+    }
+
+    private static View playToEnd(NetworkBattleCoordinator coordinator, BlockingQueue<NetworkMessage> messages,
+            BlockingQueue<Throwable> failures) throws Exception {
+        View host = new View(Side.PLAYER);
+        while (host.ended == null) {
+            NetworkMessage message = messages.poll(5, TimeUnit.SECONDS);
+            assertNotNull(message, "Combat interrompu : " + failures);
+            host.accept(message);
+            if ("ACTION_REQUIRED".equals(message.getType())) {
+                coordinator.submitHostAction(host.reply(message)).get(2, TimeUnit.SECONDS);
+            }
+        }
+        return host;
+    }
+
+    @Test
+    void constructedBattleStartsWithBothChosenStartersAndAcceptsSimultaneousActions() throws Exception {
+        try (Session session = new Session(BattleMode.CONSTRUCTED)) {
+            session.coordinator.start();
+            View host = new View(Side.PLAYER);
+            View guest = new View(Side.OPPONENT);
+            NetworkMessage hostRequest = session.nextRequest(host);
+            NetworkMessage guestRequest = session.nextRemoteRequest(guest);
+            assertEquals("TURN", hostRequest.getPayload().get("reason").getAsString());
+            assertEquals("TURN", guestRequest.getPayload().get("reason").getAsString());
+            assertSame(host.state.getTeam(Side.PLAYER).getFakemons().getFirst(),
+                    host.state.getActiveFakemon(Side.PLAYER));
+            assertSame(guest.state.getTeam(Side.PLAYER).getFakemons().getFirst(),
+                    guest.state.getActiveFakemon(Side.PLAYER));
+            session.coordinator.submitHostAction(attack(host, hostRequest)).get(2, TimeUnit.SECONDS);
+            session.remote.send(attack(guest, guestRequest));
+            session.nextRequest(host);
+            session.nextRemoteRequest(guest);
+            assertEquals(2, host.state.getTurnNumber());
+            assertEquals(host.state.getTurnNumber(), guest.state.getTurnNumber());
+            assertTrue(session.failures.isEmpty(), session.failures.toString());
+        }
+    }
+
     @Test
     void guestSessionReceivesTheBattleAndSubmitsChoicesThroughItsSenderThread() throws Exception {
         try (Session session = new Session()) {
@@ -79,9 +231,10 @@ class NetworkBattleCoordinatorTest {
         }
     }
 
-    @Test
-    void playsACompleteSixAgainstSixBattleWithSwitchesAndReplacements() throws Exception {
-        try (Session session = new Session(); var executor = Executors.newSingleThreadExecutor()) {
+    @ParameterizedTest
+    @EnumSource(BattleMode.class)
+    void playsACompleteSixAgainstSixBattleWithSwitchesAndReplacements(BattleMode mode) throws Exception {
+        try (Session session = new Session(mode); var executor = Executors.newSingleThreadExecutor()) {
             try {
                 View host = new View(Side.PLAYER);
                 var guest = executor.submit(() -> {
@@ -432,6 +585,14 @@ class NetworkBattleCoordinatorTest {
         private final NetworkBattleCoordinator coordinator;
 
         private Session() throws IOException {
+            this(BattleMode.RANDOM);
+        }
+
+        private Session(BattleMode mode) throws IOException {
+            this(mode, false);
+        }
+
+        private Session(BattleMode mode, boolean keepConnection) throws IOException {
             var drafter = new TeamDrafter(new InMemorySpeciesRepository(), new Random(50));
             Team host = drafter.randomTeam(List.of());
             Team guest = drafter.randomTeam(host.getFakemons().stream().map(Fakemon::getSpecies).toList());
@@ -445,7 +606,7 @@ class NetworkBattleCoordinatorTest {
                 client.setSoTimeout(5000);
                 remote = new NetworkConnection(client);
                 coordinator = new NetworkBattleCoordinator(new NetworkConnection(server.accept()),
-                        host, guest, new Random(50), hostMessages::add, failures::add);
+                        host, guest, mode, new Random(50), hostMessages::add, failures::add, keepConnection);
             }
         }
 

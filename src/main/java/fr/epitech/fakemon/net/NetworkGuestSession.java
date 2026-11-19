@@ -19,6 +19,8 @@ public final class NetworkGuestSession implements AutoCloseable {
     private final NetworkConnection connection;
     private final Consumer<NetworkMessage> onMessage;
     private final Consumer<Throwable> onFailure;
+    private final boolean keepConnection;
+    private final CompletableFuture<NetworkConnection> released = new CompletableFuture<>();
     private final ExecutorService reader = Executors.newSingleThreadExecutor(
             Thread.ofPlatform().daemon().name("lan-guest-reader").factory());
     private final ExecutorService sender = Executors.newSingleThreadExecutor(
@@ -28,6 +30,7 @@ public final class NetworkGuestSession implements AutoCloseable {
     private final AtomicLong pendingRequest = new AtomicLong();
     private final AtomicLong submittedRequest = new AtomicLong();
     private volatile boolean battleStarted;
+    private volatile boolean battleEnded;
     private volatile boolean replacementRequired;
     private long lastRequest;
 
@@ -40,9 +43,27 @@ public final class NetworkGuestSession implements AutoCloseable {
      */
     public NetworkGuestSession(NetworkConnection connection, Consumer<NetworkMessage> onMessage,
             Consumer<Throwable> onFailure) {
+        this(connection, onMessage, onFailure, false);
+    }
+
+    /**
+     * Prépare une session pouvant rendre la connexion après le résultat.
+     * @param connection connexion avec l'hôte
+     * @param onMessage reçoit les messages depuis le thread de lecture
+     * @param onFailure reçoit les erreurs terminales
+     * @param keepConnection conserve la connexion pour une revanche après confirmation de fin
+     */
+    public NetworkGuestSession(NetworkConnection connection, Consumer<NetworkMessage> onMessage,
+            Consumer<Throwable> onFailure, boolean keepConnection) {
         this.connection = Objects.requireNonNull(connection);
         this.onMessage = Objects.requireNonNull(onMessage);
         this.onFailure = Objects.requireNonNull(onFailure);
+        this.keepConnection = keepConnection;
+    }
+
+    /** @return la connexion une fois les derniers envois terminés et le lecteur arrêté, ou une erreur */
+    public CompletableFuture<NetworkConnection> releaseConnection() {
+        return released.copy();
     }
 
     /** Lance la réception des équipes, des événements et des demandes de choix. */
@@ -61,7 +82,7 @@ public final class NetworkGuestSession implements AutoCloseable {
      * @return la confirmation de l'envoi, ou l'erreur rencontrée
      */
     public CompletableFuture<Void> submitAction(NetworkMessage message) {
-        if (closed.get() || !battleStarted) {
+        if (closed.get() || !battleStarted || battleEnded) {
             return CompletableFuture.failedFuture(new IllegalStateException("Le combat est fermé ou pas encore démarré."));
         }
         if (message == null || !"ACTION".equals(message.getType()) || message.getPayload() == null) {
@@ -98,7 +119,7 @@ public final class NetworkGuestSession implements AutoCloseable {
      * @return la confirmation d'envoi de la demande
      */
     public CompletableFuture<Void> cancelAction(long requestId) {
-        if (closed.get() || !battleStarted || requestId < 1) {
+        if (closed.get() || !battleStarted || battleEnded || requestId < 1) {
             return CompletableFuture.failedFuture(new IllegalStateException("Ce choix ne peut plus être annulé."));
         }
         JsonObject payload = new JsonObject();
@@ -175,7 +196,15 @@ public final class NetworkGuestSession implements AutoCloseable {
                 }
                 onMessage.accept(message);
                 if (isBattleEnded(message)) {
-                    close();
+                    battleEnded = true;
+                    if (keepConnection) {
+                        sendMessage(new NetworkMessage("BATTLE_FINISHED", new JsonObject())).join();
+                        reader.shutdown();
+                        sender.shutdown();
+                        released.complete(connection);
+                    } else {
+                        close();
+                    }
                     return;
                 }
             }
@@ -216,6 +245,7 @@ public final class NetworkGuestSession implements AutoCloseable {
         if (closed.get()) {
             return;
         }
+        released.completeExceptionally(error);
         try {
             close();
         } catch (IOException closeError) {
@@ -228,6 +258,7 @@ public final class NetworkGuestSession implements AutoCloseable {
     @Override
     public void close() throws IOException {
         if (closed.compareAndSet(false, true)) {
+            released.completeExceptionally(new IOException("La session invitée est fermée."));
             pendingRequest.set(0);
             submittedRequest.set(0);
             try {

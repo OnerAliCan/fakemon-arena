@@ -130,7 +130,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             if (current == null) {
                 eventDelay.stop();
                 events.clear();
-                if (network != null) {
+                if (network != null && view != View.FINISHED) {
                     network.close();
                 }
             } else {
@@ -310,8 +310,17 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             setView(View.FINISHED);
             Runnable replay = network == null
                     ? () -> scenes.show(new BattleScreen(scenes, setup.rematch(), menu)) : null;
-            scenes.show(new BattleEndScreen(result.getWinner(), result.getReason(), turnsPlayed,
-                    state().getTeam(Side.PLAYER), replay, menu));
+            var endScreen = new BattleEndScreen(result.getWinner(), result.getReason(), turnsPlayed,
+                    state().getTeam(Side.PLAYER), replay, menu);
+            if (network != null) {
+                endScreen.offerReplay(() -> network.rematch(scenes, menu, endScreen::replayFailed));
+                endScreen.sceneProperty().addListener((property, previous, current) -> {
+                    if (previous != null && current == null) {
+                        network.close();
+                    }
+                });
+            }
+            scenes.show(endScreen);
         }
     }
 
