@@ -18,6 +18,24 @@ final class FxTestSupport {
 
     private FxTestSupport() { }
 
+    static void await(Callable<Boolean> condition) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (!run(condition)) {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("L'interface n'a pas atteint l'état attendu.");
+            }
+            Thread.sleep(25);
+        }
+    }
+
+    static void awaitBattle(BattleScreen screen) throws Exception {
+        await(() -> {
+            var field = BattleScreen.class.getDeclaredField("view");
+            field.setAccessible(true);
+            return field.get(screen).toString().equals("ACTION");
+        });
+    }
+
     static <T> T run(Callable<T> task) throws Exception {
         STARTED.get(5, TimeUnit.SECONDS);
         var result = new CompletableFuture<T>();

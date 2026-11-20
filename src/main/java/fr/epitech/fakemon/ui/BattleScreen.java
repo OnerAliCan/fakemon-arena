@@ -1,8 +1,5 @@
 package fr.epitech.fakemon.ui;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
 import fr.epitech.fakemon.core.api.BattleEngine;
 import fr.epitech.fakemon.core.api.BattleEvent;
@@ -36,6 +33,9 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Item;
 import javafx.animation.PauseTransition;
 import javafx.animation.Animation;
+import javafx.animation.SequentialTransition;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -63,8 +63,11 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     private final BattleSetup setup;
     private final SceneManager scenes;
     private final Runnable menu;
-    private final Deque<Runnable> events = new ArrayDeque<>();
-    private final PauseTransition eventDelay = new PauseTransition(Duration.millis(110));
+    private final BattleEventQueue events = new BattleEventQueue(this::present, this::presentationFinished);
+    private Duration eventDuration = Duration.millis(110);
+    private Animation pendingAnimation;
+    private Animation presentation;
+    private boolean closed;
     private final StackPane arena = new StackPane();
     private final GridPane attacks = new GridPane();
     private final TextArea battleLog = new TextArea();
@@ -128,11 +131,10 @@ public final class BattleScreen extends BorderPane implements BattleListener {
                 }
             }
         });
-        eventDelay.setOnFinished(event -> renderNext());
         sceneProperty().addListener((property, previous, current) -> {
             if (current == null) {
-                eventDelay.stop();
-                events.clear();
+                closed = true;
+                stopPresentation();
                 if (network != null && view != View.FINISHED) {
                     network.close();
                 }
@@ -176,15 +178,15 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     }
 
     private void scheduleNetworkEvents() {
-        if (network != null && eventDelay.getStatus() != Animation.Status.RUNNING) {
-            eventDelay.playFromStart();
+        if (network != null && !closed) {
+            renderNext();
         }
     }
 
     private void networkFailure(Throwable error) {
+        closed = true;
         network.close();
-        eventDelay.stop();
-        events.clear();
+        stopPresentation();
         setView(View.FINISHED);
         Label message = new Label("Le combat en LAN a été interrompu. " + error.getMessage());
         message.setWrapText(true);
@@ -214,26 +216,46 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     }
 
     private void renderNext() {
-        if (events.isEmpty()) {
-            player.hideActivation();
-            opponent.hideActivation();
-            if (view == View.RESOLVING) {
-                ready();
-            }
-            return;
+        if (!closed) {
+            events.start();
         }
+    }
+
+    private void present(Runnable event, Runnable finished) {
         player.hideActivation();
         opponent.hideActivation();
-        eventDelay.setDuration(Duration.millis(110));
-        events.removeFirst().run();
-        if (!events.isEmpty()) {
-            eventDelay.playFromStart();
-        } else if (view == View.RESOLVING) {
-            if (player.activation.isVisible() || opponent.activation.isVisible()) {
-                eventDelay.playFromStart();
-            } else {
-                ready();
-            }
+        eventDuration = Duration.millis(110);
+        pendingAnimation = null;
+        event.run();
+        if (closed) {
+            return;
+        }
+        SequentialTransition sequence = new SequentialTransition();
+        if (pendingAnimation != null) {
+            sequence.getChildren().add(pendingAnimation);
+        }
+        sequence.getChildren().add(new PauseTransition(eventDuration));
+        presentation = sequence;
+        sequence.setOnFinished(done -> {
+            presentation = null;
+            finished.run();
+        });
+        sequence.play();
+    }
+
+    private void presentationFinished() {
+        player.hideActivation();
+        opponent.hideActivation();
+        if (view == View.RESOLVING && !closed) {
+            ready();
+        }
+    }
+
+    private void stopPresentation() {
+        events.clear();
+        if (presentation != null) {
+            presentation.stop();
+            presentation = null;
         }
     }
 
@@ -243,13 +265,21 @@ public final class BattleScreen extends BorderPane implements BattleListener {
      */
     @Override
     public void onEvent(BattleEvent event) {
+        if (closed) {
+            return;
+        }
         if (event instanceof FakemonEnteredEvent entered) {
             Fakemon mon = entered.getFakemon();
             int hp = mon.getCurrentHp();
             StatusType status = mon.getStatus() == null ? null : mon.getStatus().getType();
             events.add(() -> {
-                tooltips.entered(mon, hp, status);
-                panel(entered.getSide()).show(mon, hp, status);
+                FighterPanel fighter = panel(entered.getSide());
+                pendingAnimation = BattleAnimations.enter(fighter.sprite,
+                        fighter.mon != null && fighter.sprite.getOpacity() > 0, fighter.back, () -> {
+                            tooltips.entered(mon, hp, status);
+                            fighter.show(mon, hp, status);
+                            refreshTooltips();
+                        });
                 appendLog(name(mon) + " entre en jeu.");
                 refreshTooltips();
             });
@@ -281,10 +311,12 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             appendLog(prevented.getStatus().getDisplayName() + " empêche "
                     + name(prevented.getFakemon()) + " d'attaquer.");
         } else if (event instanceof HpLostEvent loss) {
-            panel(loss.getSide()).health(loss.getRemainingHp(), loss.getFakemon().getMaxHp());
+            FighterPanel fighter = panel(loss.getSide());
+            pendingAnimation = BattleAnimations.health(fighter.sprite, fighter.displayedHp, loss.getRemainingHp(), true);
             appendLog(name(loss.getFakemon()) + " perd " + loss.getHpLost() + " PV.");
         } else if (event instanceof HpRestoredEvent gain) {
-            panel(gain.getSide()).health(gain.getRemainingHp(), gain.getFakemon().getMaxHp());
+            FighterPanel fighter = panel(gain.getSide());
+            pendingAnimation = BattleAnimations.health(fighter.sprite, fighter.displayedHp, gain.getRemainingHp(), false);
             appendLog(name(gain.getFakemon()) + " récupère " + gain.getHpRestored() + " PV.");
         } else if (event instanceof MoveMissedEvent miss) {
             appendLog(name(miss.getFakemon()) + " rate son attaque.");
@@ -300,14 +332,15 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             String text = name(activated.getFakemon()) + " bénéficie de " + activated.getItem().getDisplayName() + ".";
             panel(activated.getSide()).activate("Objet : " + activated.getItem().getDisplayName(),
                     name(activated.getFakemon()), activated.getItem());
-            eventDelay.setDuration(Duration.millis(850));
+            eventDuration = Duration.millis(850);
             appendLog(text);
         } else if (event instanceof TalentActivatedEvent activated) {
             String talentName = BattleBadges.talentName(activated.getTalent());
             panel(activated.getSide()).activate("Talent : " + talentName, name(activated.getFakemon()), null);
-            eventDelay.setDuration(Duration.millis(850));
+            eventDuration = Duration.millis(850);
             appendLog(name(activated.getFakemon()) + " active " + talentName + " !");
         } else if (event instanceof FakemonFaintedEvent fainted) {
+            pendingAnimation = BattleAnimations.faint(panel(fainted.getSide()).sprite);
             appendLog(name(fainted.getFakemon()) + " est K.O.");
         } else if (event instanceof FakemonSelectionRequiredEvent) {
             showTeam(true);
@@ -437,6 +470,8 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         private Fakemon mon;
         private Item displayedItem;
         private boolean displayedItemKnown;
+        private final StackPane sprite = new StackPane();
+        private final DoubleProperty displayedHp = new SimpleDoubleProperty();
         private final ProgressBar bar = new ProgressBar();
         private final Label hp = new Label();
         private final Label status = new Label();
@@ -446,6 +481,13 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             super(4);
             this.back = back;
             this.details = details;
+            sprite.setOpacity(0);
+            sprite.setMinSize(104, 104);
+            displayedHp.addListener((observable, previous, current) -> {
+                if (mon != null) {
+                    health((int) Math.round(current.doubleValue()), mon.getMaxHp());
+                }
+            });
             tooltip = BattleTooltips.install(this, () -> details.fakemon(mon, back));
             heldItem.setId("held-item");
             setMaxSize(240, Region.USE_PREF_SIZE);
@@ -481,9 +523,11 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             this.mon = mon;
             Label name = new Label(BattleScreen.name(mon));
             name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
+            sprite.getChildren().setAll(BattleAssets.sprite(mon.getSpecies(), back, 104));
             getChildren().setAll(name, TypeBadges.row(mon.getSpecies().getTypes()),
-                    heldItem, status, bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104), activation);
+                    heldItem, status, bar, hp, sprite, activation);
             status(statusType);
+            displayedHp.set(currentHp);
             health(currentHp, mon.getMaxHp());
         }
 

@@ -27,19 +27,19 @@ class BattleBadgesUiTest {
 
     @Test
     void bannersIdentifyBothSidesAndClearAfterTheirDisplay() throws Exception {
+        var scenes = FxTestSupport.run(() -> new SceneManager(new Scene(new StackPane(), 960, 540)));
+        var setup = BattleSetup.random(new JsonSpeciesRepository(new SpeciesFactory(), userFolder), new Random(29));
+        var screen = FxTestSupport.run(() -> {
+            var battle = new BattleScreen(scenes, setup, () -> {});
+            scenes.show(battle);
+            return battle;
+        });
+        FxTestSupport.awaitBattle(screen);
         FxTestSupport.run(() -> {
-            var scenes = new SceneManager(new Scene(new StackPane(), 960, 540));
             try {
-                var setup = BattleSetup.random(new JsonSpeciesRepository(new SpeciesFactory(), userFolder), new Random(29));
-                var screen = new BattleScreen(scenes, setup, () -> {});
                 screen.applyCss();
                 var render = BattleScreen.class.getDeclaredMethod("render", BattleEvent.class);
                 render.setAccessible(true);
-                var next = BattleScreen.class.getDeclaredMethod("renderNext");
-                next.setAccessible(true);
-                for (int index = 0; index < 100; index++) {
-                    next.invoke(screen);
-                }
                 for (Item item : Item.values()) {
                     render.invoke(screen, new ItemActivatedEvent(Side.PLAYER, setup.player.getFakemons().getFirst(), item));
                     assertTrue(screen.lookup("#player-activation").isVisible());
@@ -51,7 +51,9 @@ class BattleBadgesUiTest {
                     assertTrue(screen.lookup("#opponent-activation").isVisible());
                     assertTrue(screen.lookup("#opponent-activation").getAccessibleText().contains(BattleBadges.talentName(talent)));
                 }
-                next.invoke(screen);
+                var idle = BattleScreen.class.getDeclaredMethod("presentationFinished");
+                idle.setAccessible(true);
+                idle.invoke(screen);
                 assertFalse(screen.lookup("#player-activation").isVisible());
                 assertFalse(screen.lookup("#opponent-activation").isVisible());
             } finally {
