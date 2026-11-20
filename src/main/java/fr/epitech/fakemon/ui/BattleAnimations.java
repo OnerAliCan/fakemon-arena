@@ -18,6 +18,17 @@ import javafx.util.Duration;
 final class BattleAnimations {
     private BattleAnimations() { }
 
+    static Animation banner(Node banner) {
+        banner.setOpacity(0);
+        FadeTransition in = new FadeTransition(Duration.millis(160), banner);
+        in.setFromValue(0);
+        in.setToValue(1);
+        FadeTransition out = new FadeTransition(Duration.millis(160), banner);
+        out.setFromValue(1);
+        out.setToValue(0);
+        return new SequentialTransition(in, new PauseTransition(Duration.millis(650)), out);
+    }
+
     static Animation health(Node sprite, DoubleProperty displayedHp, int remaining, boolean impact) {
         Timeline hp = new Timeline(new KeyFrame(Duration.millis(550),
                 new KeyValue(displayedHp, remaining, Interpolator.EASE_BOTH)));

@@ -49,6 +49,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -69,6 +70,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     private Animation presentation;
     private boolean closed;
     private final StackPane arena = new StackPane();
+    private final Pane attackEffects = new Pane();
     private final GridPane attacks = new GridPane();
     private final TextArea battleLog = new TextArea();
     private final Button pauseButton = new Button("Pause");
@@ -109,7 +111,16 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         setTop(new HBox(16, pauseButton, teamButton, turnLabel, cancelChoice));
         StackPane.setAlignment(player, Pos.BOTTOM_LEFT);
         StackPane.setAlignment(opponent, Pos.TOP_RIGHT);
-        arena.getChildren().addAll(player, opponent);
+        attackEffects.setMouseTransparent(true);
+        attackEffects.setId("attack-effects");
+        attackEffects.setMinSize(0, 0);
+        arena.getChildren().addAll(player, opponent, attackEffects, player.activation, opponent.activation);
+        for (var banner : java.util.List.of(player.activation, opponent.activation)) {
+            banner.setMaxSize(300, Region.USE_PREF_SIZE);
+            banner.setMouseTransparent(true);
+            StackPane.setAlignment(banner, Pos.TOP_CENTER);
+            StackPane.setMargin(banner, new Insets(8));
+        }
         arena.setPadding(new Insets(12));
         attacks.setHgap(8);
         attacks.setVgap(8);
@@ -253,6 +264,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
 
     private void stopPresentation() {
         events.clear();
+        attackEffects.getChildren().clear();
         if (presentation != null) {
             presentation.stop();
             presentation = null;
@@ -295,6 +307,10 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             turnLabel.setText("Tour " + turn.getTurnNumber());
             appendLog("Tour " + turn.getTurnNumber());
         } else if (event instanceof MoveUsedEvent move) {
+            FighterPanel source = panel(move.getSide());
+            FighterPanel target = panel(move.getSide() == Side.PLAYER ? Side.OPPONENT : Side.PLAYER);
+            pendingAnimation = BattleAttackEffects.attack(attackEffects, source.sprite, target.sprite,
+                    move.getMove().getType(), move.getMove().getCategory() == MoveCategory.STATUS);
             appendLog(name(move.getFakemon()) + " utilise " + move.getMove().getName() + " !");
         } else if (event instanceof StatusAppliedEvent applied) {
             panel(applied.getSide()).status(applied.getStatus());
@@ -332,12 +348,12 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             String text = name(activated.getFakemon()) + " bénéficie de " + activated.getItem().getDisplayName() + ".";
             panel(activated.getSide()).activate("Objet : " + activated.getItem().getDisplayName(),
                     name(activated.getFakemon()), activated.getItem());
-            eventDuration = Duration.millis(850);
+            pendingAnimation = BattleAnimations.banner(panel(activated.getSide()).activation);
             appendLog(text);
         } else if (event instanceof TalentActivatedEvent activated) {
             String talentName = BattleBadges.talentName(activated.getTalent());
             panel(activated.getSide()).activate("Talent : " + talentName, name(activated.getFakemon()), null);
-            eventDuration = Duration.millis(850);
+            pendingAnimation = BattleAnimations.banner(panel(activated.getSide()).activation);
             appendLog(name(activated.getFakemon()) + " active " + talentName + " !");
         } else if (event instanceof FakemonFaintedEvent fainted) {
             pendingAnimation = BattleAnimations.faint(panel(fainted.getSide()).sprite);
@@ -395,10 +411,16 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             String power = move.getCategory() == MoveCategory.STATUS ? "Sans dégâts" : "Puissance " + move.getPower();
             String effect = move.getStatus() == null ? ""
                     : "\n" + move.getStatus().getDisplayName() + " : " + move.getStatusChance() + "%";
-            Button button = new Button(move.getName() + " — " + move.getType()
+            Button button = new Button(move.getName() + " — " + TypeBadges.name(move.getType())
                     + "\n" + power + " · Précision " + move.getAccuracy() + "%" + effect);
-            button.setPrefWidth(235);
-            button.setMinHeight(48);
+            button.setMinSize(240, 88);
+            button.setPrefSize(240, 88);
+            button.setMaxSize(240, 88);
+            button.setGraphic(TypeBadges.icon(move.getType()));
+            String tint = TypeBadges.color(move.getType()).interpolate(javafx.scene.paint.Color.WHITE, .85).toString();
+            button.setStyle("-fx-base: #" + tint.substring(2, 8) + "; -fx-text-fill: #17212b;"
+                    + "-fx-border-color: " + TypeBadges.colorCss(move.getType()) + ";"
+                    + "-fx-border-width: 0 0 0 5; -fx-border-radius: 5; -fx-font-size: 12px; -fx-padding: 8;");
             button.setWrapText(true);
             button.setOnAction(event -> submit(new UseMove(move)));
             button.setUserData(move);
@@ -509,6 +531,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             Label name = new Label(owner + (back ? " · Votre camp" : " · Adversaire"));
             name.setStyle("-fx-text-fill: #fff5dd;");
             activation.getChildren().setAll(heading, name);
+            activation.setOpacity(0);
             activation.setVisible(true);
             activation.setManaged(true);
             activation.setAccessibleText(owner + " : " + title);
@@ -525,7 +548,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
             sprite.getChildren().setAll(BattleAssets.sprite(mon.getSpecies(), back, 104));
             getChildren().setAll(name, TypeBadges.row(mon.getSpecies().getTypes()),
-                    heldItem, status, bar, hp, sprite, activation);
+                    heldItem, status, bar, hp, sprite);
             status(statusType);
             displayedHp.set(currentHp);
             health(currentHp, mon.getMaxHp());

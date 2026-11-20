@@ -14,6 +14,27 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 @EnabledIfSystemProperty(named = "fakemon.ui.tests", matches = "true")
 class BattleAnimationsUiTest {
     @Test
+    void bannerFadesWithoutChangingItsPosition() throws Exception {
+        var completed = FxTestSupport.run(() -> {
+            var banner = new StackPane();
+            banner.setLayoutY(25);
+            var appeared = new AtomicBoolean();
+            banner.opacityProperty().addListener((observable, old, value) -> {
+                if (value.doubleValue() > .9) {
+                    appeared.set(true);
+                }
+            });
+            return play(BattleAnimations.banner(banner), () -> {
+                assertTrue(appeared.get());
+                assertEquals(0, banner.getOpacity(), .001);
+                assertEquals(25, banner.getLayoutY(), .001);
+                assertEquals(0, banner.getTranslateY(), .001);
+            });
+        });
+        completed.get(5, TimeUnit.SECONDS);
+    }
+
+    @Test
     void healthPassesThroughIntermediateValuesAndRestoresOpacity() throws Exception {
         var completed = FxTestSupport.run(() -> {
             var sprite = new StackPane();

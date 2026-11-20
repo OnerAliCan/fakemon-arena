@@ -7,6 +7,13 @@ pour éviter de montrer trop tôt l'état final du tour.
 
 ## Animations
 
+- Attaque : effet du type au lancement, avec un trajet vers l'adversaire pour
+  les attaques physiques et spéciales. Flamme et traînée pour Feu, goutte et
+  cercles pour Eau, feuilles pour Nature, éclairs pour Foudre, éclats pour Roche,
+  volutes pour Vent, bulles pour Venin, poing et ondes pour Force, fumée pour
+  Ombre et scintillement pour Éther. Les attaques de statut jouent une aura
+  de lancement sur le lanceur. L'effet disparaît avant l'événement suivant.
+
 - Perte de PV : clignotement du sprite (quatre alternances de 75 ms) et
   `Timeline` de 550 ms. La barre, sa couleur et le nombre de PV suivent une
   propriété JavaFX contenant les PV affichés, sans modifier le Fakemon.
@@ -19,6 +26,15 @@ pour éviter de montrer trop tôt l'état final du tour.
   Après un KO, aucune seconde sortie n'est jouée. Les déplacements du sprite
   sont réinitialisés avant l'entrée du remplaçant.
 
+`BattleAttackEffects` dessine les effets élémentaires dans une couche transparente
+aux clics et nettoie cette couche à la fin ou à la sortie de l'écran. Les couleurs
+et les formes de type viennent des mêmes SVG que les icônes du jeu, via `TypeBadges`.
+Les ressources sont lues une seule fois et chaque utilisation crée ses propres nœuds.
+
+Les quatre boutons d'attaque font tous 240 × 88 pixels, y compris lorsqu'un effet
+de statut ajoute une ligne. Chaque bouton affiche le nom français et l'icône de
+son type, un fond clair teinté et une bordure reprenant sa couleur exacte.
+
 `BattleAnimations` construit les `Timeline`, `FadeTransition`,
 `TranslateTransition`, `ParallelTransition` et `SequentialTransition`.
 
@@ -26,7 +42,10 @@ pour éviter de montrer trop tôt l'état final du tour.
 
 `BattleEventQueue` ne démarre qu'une présentation à la fois. Son callback de fin
 est appelé par `onFinished`, après l'animation et une courte pause de 110 ms.
-Les bannières d'objet et de talent conservent leur durée de 850 ms.
+Les bannières d'objet et de talent sont superposées en haut de l'arène : elles
+ne font plus partie du bloc du fakemon et ne déplacent donc ni son sprite ni ses PV.
+Elles apparaissent en fondu (160 ms), restent lisibles 650 ms puis disparaissent
+en fondu (160 ms).
 Un message réseau reçu entre-temps s'ajoute à la file et ne coupe pas l'animation.
 Les commandes de combat restent verrouillées pendant la résolution d'un tour.
 

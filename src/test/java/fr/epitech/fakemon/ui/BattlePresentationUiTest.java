@@ -64,11 +64,15 @@ class BattlePresentationUiTest {
             FxTestSupport.run(() -> {
                 assertEquals(1, sprite.getOpacity(), .001);
                 assertEquals(0, sprite.getTranslateY(), .001);
-                screen.onEvent(new HpLostEvent(Side.OPPONENT, replacement, 1, replacement.getCurrentHp() - 1));
+                screen.onEvent(new fr.epitech.fakemon.core.api.MoveUsedEvent(Side.OPPONENT, replacement,
+                        replacement.getMoves().getFirst()));
                 start(screen);
                 var active = (Animation) field(screen, "presentation");
                 assertEquals(Animation.Status.RUNNING, active.getStatus());
+                var effects = (javafx.scene.layout.Pane) field(screen, "attackEffects");
+                assertEquals(1, effects.getChildren().size());
                 scenes.show(new StackPane());
+                assertTrue(effects.getChildren().isEmpty());
                 assertEquals(Animation.Status.STOPPED, active.getStatus());
                 assertNull(field(screen, "presentation"));
                 assertEquals(true, field(screen, "closed"));

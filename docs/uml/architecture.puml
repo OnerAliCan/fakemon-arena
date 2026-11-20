@@ -28,7 +28,7 @@ package "ui · écrans JavaFX" {
   rectangle "Écran de combat\net panneau d'équipe" as Combat <<devB>>
   rectangle "Infobulles\nBattleTooltips" as Details <<devB>>
   rectangle "File de présentation\nBattleEventQueue" as Queue <<devB>>
-  rectangle "Animations\nBattleAnimations" as Anim <<devB>>
+  rectangle "Animations\nBattleAnimations, BattleAttackEffects" as Anim <<devB>>
   rectangle "Son" as Son <<devB>>
   rectangle "Mondex" as Mondex <<devB>>
   rectangle "Ajouter un Mon\n(le dashboard)" as Dashboard <<devB>>
