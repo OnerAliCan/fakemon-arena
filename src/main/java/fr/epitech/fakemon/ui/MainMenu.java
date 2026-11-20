@@ -51,7 +51,8 @@ public class MainMenu extends VBox {
             constructed.setOnAction(click -> sceneManager.show(new TeamSelectionScreen(
                     roster, sceneManager, () -> sceneManager.show(modes), menu)));
             Button random = new Button("Combat aléatoire");
-            random.setOnAction(click -> sceneManager.show(new TeamPreviewScreen(sceneManager, roster, menu)));
+            random.setOnAction(click -> sceneManager.show(new BattleScreen(
+                    sceneManager, BattleSetup.random(roster, new java.util.Random()), menu)));
             Button back = new Button("Retour au menu principal");
             back.setOnAction(click -> menu.run());
             modes.getChildren().addAll(new Label("Combat contre l’IA"), constructed, random, back);
