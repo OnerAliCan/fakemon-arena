@@ -116,11 +116,8 @@ les ajouts, mais l'écran de saisie **Ajouter un Mon** reste à livrer.
 - [#20](https://github.com/OnerAliCan/fakemon-arena/issues/20) : formulaire **Ajouter un Mon**.
 - [#16](https://github.com/OnerAliCan/fakemon-arena/issues/16) : icônes des types ; les sprites sont présents.
 - [#27](https://github.com/OnerAliCan/fakemon-arena/issues/27) : animations d'impact, de PV et de K.O.
-- [#28](https://github.com/OnerAliCan/fakemon-arena/issues/28) : musiques, effets et cris du roster.
+- [#28](https://github.com/OnerAliCan/fakemon-arena/issues/28) : musique du menu, bruitages et cris en combat.
 - [#66](https://github.com/OnerAliCan/fakemon-arena/issues/66) : infobulles détaillées en combat.
-
-Les réglages de volume sont déjà accessibles depuis **Options** et la pause. Les
-commandes audio de combat seront reliées aux médias lors de #28.
 
 ## Conception et crédits
 
@@ -135,7 +132,22 @@ entre le moteur et les écrans est dans `core/api`.
   utilisée dans ce projet non commercial avec attribution. Les auteurs, les liens
   et les conditions figurent dans les [crédits des sprites](src/main/resources/sprites/CREDITS.md)
   et dans l'écran **Crédits** du jeu.
-- Aucune piste musicale n'est incluse dans cette version.
+
+## Musique de combat
+
+[Soundtrack Pokemon battle theme, par PanicAce!](https://panicace.itch.io/soundtrack-pokemon-theme-battle),
+composition originale proposée en utilisation gratuite par son auteur.
+Les fichiers `fight-intro.mp3` et `main-theme.mp3` sont des extraits de cette piste :
+l'introduction joue une fois, puis le thème principal tourne en boucle pendant le combat.
+Le volume se règle dans les options ou depuis la pause, en solo comme en LAN.
+
+## Sons des menus
+
+[JRPG Style UI Sounds, par KillaMaaki](https://opengameart.org/content/jrpg-style-ui-sounds),
+sous licence [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+Les six fichiers WAV sont utilisés sans modification : erreur sur bouton désactivé,
+ouverture de menu, lancement de combat, retour, confirmation et déplacement du curseur.
+Le volume des effets sonores est partagé avec les cris et se règle dans les options.
 
 ## Équipe
 

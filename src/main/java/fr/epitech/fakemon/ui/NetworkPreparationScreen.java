@@ -61,6 +61,7 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
         setAlignment(Pos.CENTER);
         setPadding(new Insets(24));
         status.setWrapText(true);
+        MenuSounds.action(back, MenuSounds.Sound.CLOSE);
         back.setOnAction(event -> {
             close();
             menu.run();
@@ -85,6 +86,7 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
             HBox choices = new HBox(16, random, constructed);
             choices.setAlignment(Pos.CENTER);
             Button start = new Button("Lancer");
+            MenuSounds.action(start, MenuSounds.Sound.NONE);
             start.setDisable(true);
             status.setText("Invité : pas encore prêt.");
             start.setOnAction(event -> {
@@ -129,6 +131,7 @@ final class NetworkPreparationScreen extends VBox implements AutoCloseable {
             close();
             menu.run();
         }, this::chooseStarter);
+        MenuSounds.play(this, MenuSounds.Sound.OPEN);
         getChildren().setAll(selection);
         VBox.setVgrow(selection, Priority.ALWAYS);
     }

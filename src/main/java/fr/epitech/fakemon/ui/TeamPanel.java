@@ -46,6 +46,7 @@ final class TeamPanel extends VBox {
         }
         if (!required) {
             Button back = new Button("Retour au combat");
+            MenuSounds.action(back, MenuSounds.Sound.CLOSE);
             back.setOnAction(event -> onCancel.run());
             getChildren().add(back);
         }

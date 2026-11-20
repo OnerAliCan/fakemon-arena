@@ -7,10 +7,16 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 /**
  * Centralise la navigation entre les écrans du jeu.
  */
-public final class SceneManager {
+public final class SceneManager implements AutoCloseable {
 
     private final Scene scene;
     private final VolumeSettings volumeSettings = new VolumeSettings();
+    private final MenuSounds sounds = new MenuSounds(volumeSettings.effectsPercent());
+
+    /** Donne le niveau de musique partagé par les écrans. */
+    ReadOnlyDoubleProperty musicVolumePercent() {
+        return volumeSettings.musicPercent();
+    }
 
     /** Donne le niveau des effets sonores partagé par les écrans. */
     ReadOnlyDoubleProperty effectsVolumePercent() {
@@ -19,7 +25,7 @@ public final class SceneManager {
 
     /** Ouvre les réglages audio de la session. */
     public void showVolumeSettings() {
-        volumeSettings.show(scene.getWindow());
+        volumeSettings.show(scene.getWindow(), sounds);
     }
 
     /**
@@ -29,6 +35,14 @@ public final class SceneManager {
      */
     public SceneManager(Scene scene) {
         this.scene = scene;
+        sounds.preload();
+        sounds.install(scene);
+    }
+
+    /** Libère les sons de la session à la fermeture du jeu. */
+    @Override
+    public void close() {
+        sounds.close();
     }
 
     /**

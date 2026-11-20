@@ -12,8 +12,10 @@ final class BattlePausePanel extends VBox {
     BattlePausePanel(Runnable onResume, Runnable onVolume, Runnable onForfeit) {
         super(14);
         setAlignment(Pos.CENTER);
+        MenuSounds.action(resume, MenuSounds.Sound.CLOSE);
         resume.setOnAction(event -> onResume.run());
         Button volume = new Button("Volume");
+        MenuSounds.action(volume, MenuSounds.Sound.OPEN);
         volume.setOnAction(event -> onVolume.run());
         Button forfeit = new Button("Abandonner");
         forfeit.setOnAction(event -> onForfeit.run());

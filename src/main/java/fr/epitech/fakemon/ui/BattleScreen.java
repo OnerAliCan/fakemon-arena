@@ -63,6 +63,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     private final BattleSetup setup;
     private final SceneManager scenes;
     private final Runnable menu;
+    private final BattleMusic music;
     private final Deque<Runnable> events = new ArrayDeque<>();
     private final PauseTransition eventDelay = new PauseTransition(Duration.millis(110));
     private final StackPane arena = new StackPane();
@@ -93,11 +94,15 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         engine = network == null ? new DefaultBattleEngine() : null;
         this.scenes = scenes;
         this.menu = menu;
+        music = new BattleMusic(scenes.musicVolumePercent());
         setPadding(new Insets(12));
         var background = BattleScreen.class.getResource("/backgrounds/battle-grassland.png");
         arena.setStyle("-fx-background-image: url('" + background.toExternalForm()
                 + "'); -fx-background-size: cover; -fx-background-position: center;");
         setFocusTraversable(true);
+        MenuSounds.action(pauseButton, MenuSounds.Sound.OPEN);
+        MenuSounds.action(teamButton, MenuSounds.Sound.OPEN);
+        MenuSounds.action(cancelChoice, MenuSounds.Sound.CLOSE);
         pauseButton.setOnAction(event -> pause());
         teamButton.setOnAction(event -> showTeam(false));
         cancelChoice.setVisible(false);
@@ -122,21 +127,25 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             if (event.getCode() == KeyCode.ESCAPE) {
                 event.consume();
                 if (view == View.PAUSE || view == View.TEAM) {
+                    MenuSounds.play(this, MenuSounds.Sound.CLOSE);
                     ready();
                 } else if (view == View.ACTION) {
-                    pause();
+                    pauseButton.fire();
                 }
             }
         });
         eventDelay.setOnFinished(event -> renderNext());
         sceneProperty().addListener((property, previous, current) -> {
             if (current == null) {
+                music.close();
                 eventDelay.stop();
                 events.clear();
                 if (network != null && view != View.FINISHED) {
                     network.close();
                 }
             } else {
+                MenuSounds.play(this, MenuSounds.Sound.LOAD_SAVE);
+                music.play();
                 requestFocus();
             }
         });
@@ -182,6 +191,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     }
 
     private void networkFailure(Throwable error) {
+        music.close();
         network.close();
         eventDelay.stop();
         events.clear();
@@ -189,6 +199,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         Label message = new Label("Le combat en LAN a été interrompu. " + error.getMessage());
         message.setWrapText(true);
         Button back = new Button("Retour au menu principal");
+        MenuSounds.action(back, MenuSounds.Sound.CLOSE);
         back.setOnAction(event -> menu.run());
         setCenter(new VBox(12, message, back));
         setBottom(null);
