@@ -19,9 +19,17 @@ import javafx.scene.layout.VBox;
 
 /** Présente l'équipe et transmet la sélection au combat. */
 final class TeamPanel extends VBox {
+    private final BattleTooltips tooltips;
+
     TeamPanel(List<Fakemon> members, Fakemon active, boolean required,
             Consumer<SendFakemon> onSelect, Runnable onCancel) {
+        this(members, active, required, onSelect, onCancel, new BattleTooltips());
+    }
+
+    TeamPanel(List<Fakemon> members, Fakemon active, boolean required,
+            Consumer<SendFakemon> onSelect, Runnable onCancel, BattleTooltips tooltips) {
         super(6);
+        this.tooltips = tooltips;
         setPadding(new Insets(16));
         setMaxSize(660, Region.USE_PREF_SIZE);
         setStyle("-fx-background-color: #262b45; -fx-background-radius: 12;"
@@ -76,6 +84,7 @@ final class TeamPanel extends VBox {
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(3, 0, 3, 0));
         row.setStyle("-fx-border-color: #3a4170 transparent transparent transparent;");
+        BattleTooltips.install(row, () -> tooltips.fakemon(member, true));
         return row;
     }
 

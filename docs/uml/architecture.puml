@@ -26,6 +26,7 @@ actor "Joueur" as Joueur
 package "ui · écrans JavaFX" {
   rectangle "Menus\ncombat aléatoire ou construit" as Menus <<devB>>
   rectangle "Écran de combat\net panneau d'équipe" as Combat <<devB>>
+  rectangle "Infobulles\nBattleTooltips" as Details <<devB>>
   rectangle "Animations et son" as Son <<devB>>
   rectangle "Mondex" as Mondex <<devB>>
   rectangle "Ajouter un Mon\n(le dashboard)" as Dashboard <<devB>>
@@ -67,6 +68,12 @@ Menus --> ITeam : randomTeam, buildTeam
 Menus --> IEngine : start
 Combat --> IEngine : submitAction, getState
 IListener --> Combat : onEvent
+Combat --> Details : événements affichés\net cible visible
+note right of Details
+  PV et statuts synchronisés avec l'affichage.
+  Objets, talents et attaques adverses
+  seulement après leur révélation.
+end note
 IListener --> Son : onEvent
 Mondex --> IRepo : findAll
 Dashboard --> IRepo : add

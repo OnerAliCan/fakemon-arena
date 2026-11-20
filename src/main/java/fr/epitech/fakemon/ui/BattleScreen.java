@@ -30,6 +30,7 @@ import fr.epitech.fakemon.core.api.AttackPreventedEvent;
 import fr.epitech.fakemon.core.api.StatusRemovedEvent;
 import fr.epitech.fakemon.core.model.StatusType;
 import fr.epitech.fakemon.core.model.MoveCategory;
+import fr.epitech.fakemon.core.model.Move;
 import fr.epitech.fakemon.core.engine.DefaultBattleEngine;
 import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Item;
@@ -41,6 +42,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -71,8 +73,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     private final Button cancelChoice = new Button("Annuler mon choix");
     private final Label turnLabel = new Label();
     private final HBox controls;
-    private final FighterPanel player = new FighterPanel(true);
-    private final FighterPanel opponent = new FighterPanel(false);
+    private final BattleTooltips tooltips = new BattleTooltips();
+    private final FighterPanel player = new FighterPanel(true, tooltips);
+    private final FighterPanel opponent = new FighterPanel(false, tooltips);
     private View view = View.RESOLVING;
     private int turnsPlayed;
 
@@ -243,11 +246,12 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         if (event instanceof FakemonEnteredEvent entered) {
             Fakemon mon = entered.getFakemon();
             int hp = mon.getCurrentHp();
-            Item item = mon.getItem();
             StatusType status = mon.getStatus() == null ? null : mon.getStatus().getType();
             events.add(() -> {
-                panel(entered.getSide()).show(mon, hp, item, status);
+                tooltips.entered(mon, hp, status);
+                panel(entered.getSide()).show(mon, hp, status);
                 appendLog(name(mon) + " entre en jeu.");
+                refreshTooltips();
             });
         } else {
             events.add(() -> render(event));
@@ -256,6 +260,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     }
 
     private void render(BattleEvent event) {
+        tooltips.observe(event);
         if (event instanceof TurnStartedEvent turn) {
             turnLabel.setText("Tour " + turn.getTurnNumber());
             appendLog("Tour " + turn.getTurnNumber());
@@ -322,6 +327,17 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             }
             scenes.show(endScreen);
         }
+        refreshTooltips();
+    }
+
+    private void refreshTooltips() {
+        player.refreshTooltip();
+        opponent.refreshTooltip();
+        attacks.getChildren().forEach(node -> {
+            if (node instanceof Button button && button.getUserData() instanceof Move move) {
+                button.getTooltip().setText(tooltips.move(move, opponent.mon));
+            }
+        });
     }
 
     private void ready() {
@@ -352,6 +368,8 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             button.setMinHeight(48);
             button.setWrapText(true);
             button.setOnAction(event -> submit(new UseMove(move)));
+            button.setUserData(move);
+            BattleTooltips.install(button, () -> tooltips.move(move, opponent.mon));
             attacks.add(button, index % 2, index / 2);
         }
         setView(View.ACTION);
@@ -370,7 +388,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         var state = state();
         setView(required ? View.REQUIRED : View.TEAM);
         setCenter(new StackPane(new TeamPanel(state.getTeam(Side.PLAYER).getFakemons(), state.getActiveFakemon(Side.PLAYER),
-                required, this::submit, this::ready)));
+                required, this::submit, this::ready, tooltips)));
         setBottom(null);
         requestFocus();
     }
@@ -413,14 +431,23 @@ public final class BattleScreen extends BorderPane implements BattleListener {
 
     private static final class FighterPanel extends VBox {
         private final boolean back;
+        private final BattleTooltips details;
+        private final Tooltip tooltip;
+        private final Label heldItem = new Label("Objet : inconnu");
+        private Fakemon mon;
+        private Item displayedItem;
+        private boolean displayedItemKnown;
         private final ProgressBar bar = new ProgressBar();
         private final Label hp = new Label();
         private final Label status = new Label();
         private final VBox activation = new VBox(2);
 
-        FighterPanel(boolean back) {
+        FighterPanel(boolean back, BattleTooltips details) {
             super(4);
             this.back = back;
+            this.details = details;
+            tooltip = BattleTooltips.install(this, () -> details.fakemon(mon, back));
+            heldItem.setId("held-item");
             setMaxSize(240, Region.USE_PREF_SIZE);
             bar.setPrefSize(200, 18);
             bar.setMinHeight(18);
@@ -450,13 +477,29 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             activation.setManaged(false);
         }
 
-        void show(Fakemon mon, int currentHp, Item item, StatusType statusType) {
+        void show(Fakemon mon, int currentHp, StatusType statusType) {
+            this.mon = mon;
             Label name = new Label(BattleScreen.name(mon));
             name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
             getChildren().setAll(name, new Label("Types : " + mon.getSpecies().getTypes()),
-                    BattleBadges.itemLabel(item), status, bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104), activation);
+                    heldItem, status, bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104), activation);
             status(statusType);
             health(currentHp, mon.getMaxHp());
+        }
+
+        void refreshTooltip() {
+            if (mon == null) {
+                return;
+            }
+            tooltip.setText(details.fakemon(mon, back));
+            boolean known = back || details.itemKnown(mon);
+            Item item = back ? mon.getItem() : details.revealedItem(mon);
+            if (known != displayedItemKnown || item != displayedItem) {
+                heldItem.setText(!known ? "Objet : inconnu" : item == null ? "Aucun objet" : item.getDisplayName());
+                heldItem.setGraphic(known ? BattleBadges.itemIcon(item) : null);
+                displayedItem = item;
+                displayedItemKnown = known;
+            }
         }
 
         void status(StatusType type) {
