@@ -1,6 +1,6 @@
 @startuml combat
 !pragma layout smetana
-title Fakemon Arena · écran de combat (v1)
+title Fakemon Arena · écran de combat, version livrée
 skinparam defaultFontName Segoe UI
 skinparam state {
   BackgroundColor #FFF6D6
@@ -13,23 +13,28 @@ state mode <<choice>>
 state "Choix du premier mon\n(panneau d'équipe)" as Premier
 state "Choix de l'action" as Choix
 state "Panneau d'équipe\n(avec Retour)" as Panneau
-state "Résolution du tour\n(animations, journal)" as Resolution
+state "Affichage des événements\n(journal et bannières)" as Resolution
+state "Attente du choix adverse\n(LAN)" as Attente
 state "Remplacement forcé\n(panneau sans Retour)" as Remplacement
 state "Pause" as Pause : Reprendre\nVolume\nAbandonner
 state "Volume" as Volume : musique et effets
 
 [*] --> mode
-mode --> Premier : combat construit
-mode --> Choix : combat aléatoire\n(premier mon au hasard)
+mode --> Premier : construit contre l'IA
+mode --> Choix : aléatoire, ou LAN\navec premier combattant déjà choisi
 Premier --> Choix : Envoyer
-Choix --> Resolution : clic sur une attaque
+Choix --> Resolution : attaque contre l'IA
+Choix --> Attente : attaque en LAN
 Choix --> Panneau : bouton Équipe
 Panneau --> Choix : Retour
-Panneau --> Resolution : Envoyer
+Panneau --> Resolution : Envoyer contre l'IA
+Panneau --> Attente : Envoyer en LAN
+Attente --> Choix : Annuler mon choix\nsi le choix adverse n'a pas verrouillé le tour
+Attente --> Resolution : deux choix verrouillés
 Resolution --> Choix : tour terminé
 Resolution --> Remplacement : mon du joueur KO
-Remplacement --> Choix : Envoyer
-Choix --> Pause : Échap
+Remplacement --> Resolution : Envoyer
+Choix --> Pause : Pause ou Échap
 Pause --> Choix : Reprendre ou Échap
 Pause --> Volume : Volume
 Volume --> Pause : Fermer

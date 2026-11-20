@@ -11,7 +11,7 @@ skinparam rectangle {
   BorderColor #3A4170
   BackgroundColor #FAFAFD
 }
-title Fakemon Arena · cas d'utilisation, combat contre l'IA (v1)
+title Fakemon Arena · cas d'utilisation, combat contre l'IA
 
 actor "Joueur" as joueur
 actor "Ordinateur" as ia
@@ -27,7 +27,7 @@ rectangle "Jouer un combat contre l'IA" {
   usecase "Jouer un tour" as tour
   usecase "Choisir son premier mon" as premier
   usecase "Choisir ses 6 fakemon" as choisir6
-  usecase "Tirer les équipes" as tirer
+  usecase "Préparer les équipes,\nattaques et objets" as tirer
   usecase "Choisir le mode\n(aléatoire ou construit)" as mode
 }
 

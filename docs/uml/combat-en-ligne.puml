@@ -1,37 +1,37 @@
 @startuml combat-en-ligne
 !pragma layout smetana
+top to bottom direction
 skinparam defaultFontName "Segoe UI"
 hide empty description
-title Fakemon Arena · navigation du combat LAN
+
+title Fakemon Arena · navigation du combat LAN, version livrée
 
 state "Menu principal" as Menu
-state "Lobby LAN" as Lobby
-state "Attente de l'invité" as Waiting
-state "Connexion à l'hôte" as Joining
-state "Combat aléatoire" as Battle
+state "Connexion LAN" as Lobby : Héberger : afficher l'IP et attendre\nRejoindre : saisir l'IP de l'hôte\nAnnuler ou Échap : interrompre la tentative
+state "Préparation du combat" as Preparation : Invité : Prêt\nHôte : choisir le mode et Lancer
+state "Choisir son équipe" as Selection : six espèces différentes\npuis choix du premier Fakemon
+state "Attendre les deux équipes" as TeamsReady
+state "Combat" as Battle : choix simultanés\nannulation avant verrouillage\nmoteur exécuté sur l'hôte
 state "Bilan du combat" as Result
-state "Connexion interrompue" as Error
+state "Connexion ou préparation interrompue" as Error
 
 [*] --> Menu
 Menu --> Lobby : Combat en ligne
-Lobby --> Waiting : Héberger, port 5000
-Lobby --> Joining : Rejoindre avec une adresse IP
-Joining --> Lobby : échec de connexion affiché
-Waiting --> Lobby : Annuler ou Échap
-Joining --> Lobby : Annuler ou Échap
-Lobby --> Menu : Retour ou Échap
-Waiting --> Menu : Retour
-Joining --> Menu : Retour
-Waiting --> Battle : invité connecté
-Joining --> Battle : équipes reçues de l'hôte
+Lobby --> Lobby : erreur de connexion\nou tentative annulée
+Lobby --> Preparation : connexion établie
+Preparation --> TeamsReady : mode aléatoire
+Preparation --> Selection : mode construit
+Selection --> TeamsReady : équipe et premier combattant validés
+TeamsReady --> Battle : deux équipes validées par l'hôte
+Preparation --> Error : erreur détectée
 Battle --> Result : victoire, défaite ou abandon
 Battle --> Error : déconnexion ou message invalide
 Error --> Menu : Retour au menu principal
 Result --> Menu : Menu
+Result --> Preparation : les deux joueurs demandent Revanche\nconnexion réutilisée
 
-note right of Battle
-  L'hôte tire les deux équipes et exécute le moteur.
-  Chaque joueur répond quand son choix est demandé.
-  Le combat reçoit les événements dans leur ordre.
+note bottom of Lobby
+  Retour au menu principal reste disponible
+  pendant la connexion et la préparation.
 end note
 @enduml

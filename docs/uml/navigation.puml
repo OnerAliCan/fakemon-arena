@@ -1,6 +1,6 @@
 @startuml navigation
 !pragma layout smetana
-title Fakemon Arena · menu principal (v1)
+title Fakemon Arena · menu principal, version livrée
 skinparam defaultFontName Segoe UI
 skinparam state {
   BackgroundColor #FFF6D6
@@ -10,10 +10,10 @@ skinparam state {
 hide empty description
 
 state "Menu principal" as Menu
-state "Combat en ligne\n(bonus)" as Ligne : voir combat-en-ligne.puml
+state "Combat en LAN" as Ligne : voir combat-en-ligne.puml
 state "Combat contre l'IA" as IA : voir combat-ia.puml
 state "Mondex" as Mondex : voir mondex.puml
-state "Ajouter un Mon" as Ajouter : voir ajouter-un-mon.puml
+state "Ajouter un Mon" as Ajouter : écran provisoire\nformulaire prévu dans #20
 state "Options" as Options : volume de la musique\net des effets
 state "Crédits" as Credits
 
@@ -24,13 +24,20 @@ Menu --> Mondex
 Menu --> Ajouter
 Menu --> Options
 Menu --> Credits
+Ligne --> Menu : Retour
+IA --> Menu : Retour
+Mondex --> Menu : Retour ou Échap
+Ajouter --> Menu : Retour
+Options --> Menu : Fermer la fenêtre de volume
+Credits --> Menu : Retour ou Échap
 Menu --> [*] : Quitter
 
 note right of Menu
   Boutons, dans l'ordre : Combat en ligne,
   Combat contre l'IA, Mondex, Ajouter un Mon,
   Options, Crédits, Quitter.
-  Sur chaque écran, Échap ou Retour
-  ramène à l'écran précédent.
+  Les écrans de combat, le lobby LAN,
+  le Mondex et les crédits gèrent Échap.
+  Les autres parcours proposent un bouton Retour.
 end note
 @enduml

@@ -14,10 +14,13 @@ d’un remplaçant valide tant qu’il reste des membres debout. **Revanche** co
 les espèces, attaques et objets du joueur, restaure les PV, retire l’équipe
 adverse au sort et redemande le premier fakemon.
 
-Le parcours construit simule des dégâts fixes en attendant l’intégration du
-moteur. Les objets sont tirés et affichés, mais leurs effets relèvent de #24.
-`BundledRoster` lit uniquement le catalogue embarqué ; il ne sauvegarde pas
-les ajouts de l’utilisateur.
+Le parcours utilise `DefaultBattleEngine` et ses règles de dégâts, de talents,
+d’objets et de statuts. Le catalogue est fourni par `JsonSpeciesRepository`, qui
+charge les espèces intégrées et les fiches du dossier utilisateur.
+
+En LAN, la même sélection est proposée aux deux joueurs après le choix du mode
+par l’hôte. Chacun choisit son premier combattant pendant la préparation ; l’hôte
+construit les deux équipes validées avant de démarrer le moteur.
 
 Pour vérifier : lancer `./mvnw javafx:run`, tester Valider à 0, 5 et 6 choix,
 retirer une carte, valider, envoyer un premier fakemon puis abandonner pour

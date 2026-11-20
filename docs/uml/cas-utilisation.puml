@@ -11,25 +11,34 @@ skinparam rectangle {
   BorderColor #3A4170
   BackgroundColor #FAFAFD
 }
-title Fakemon Arena · cas d'utilisation, vue d'ensemble (v1)
+title Fakemon Arena · cas d'utilisation, version livrée
 
 actor "Joueur" as joueur
 actor "Ordinateur" as ia
-actor "Adversaire en ligne\n(bonus)" as adv
+actor "Adversaire en LAN" as adv
 
 rectangle "Fakemon Arena" {
-  usecase "Jouer un combat\nen ligne (bonus)" as jouerLigne
+  usecase "Jouer un combat\nen LAN" as jouerLigne
   usecase "Jouer un combat\ncontre l'IA" as jouerIA
   usecase "Consulter le Mondex" as mondex
-  usecase "Ajouter un Mon" as ajouter
+  usecase "Ajouter un Mon\n(prévu, #20)" as ajouter #EEEEEE
+  usecase "Régler le volume" as volume
+  usecase "Consulter les crédits" as credits
 }
 
 joueur --> jouerLigne
 joueur --> jouerIA
 joueur --> mondex
 joueur --> ajouter
+joueur --> volume
+joueur --> credits
 jouerIA -- ia
 jouerLigne -- adv
+
+note right of ajouter
+  Seul l'écran provisoire est accessible.
+  Le formulaire reste à livrer.
+end note
 
 note as detail
   Le détail de chaque cas est dans

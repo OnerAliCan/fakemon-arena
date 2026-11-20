@@ -2,6 +2,13 @@
 
 Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'elles et commités à côté.
 
+Les diagrammes du menu et des combats décrivent la version livrée. Le parcours IA
+inclut encore l'aperçu aléatoire, dont le retrait est suivi dans #42. Le parcours LAN
+comprend la préparation, les deux modes, les choix simultanés et la revanche.
+Les deux diagrammes d'**Ajouter un Mon** restent les spécifications de #20 :
+le formulaire n'est pas encore implémenté. Les écarts encore ouverts au game design
+sont récapitulés dans le [README du projet](../../README.md#travaux-encore-ouverts).
+
 | Diagramme | Source | Issue |
 |---|---|---|
 | Architecture : vue d'ensemble | [architecture.puml](architecture.puml) | #6 |
@@ -11,15 +18,15 @@ Les sources sont en PlantUML (`.puml`) ; les PNG sont générés à partir d'ell
 | Séquence d'un tour | [sequence-tour.puml](sequence-tour.puml) | #6 |
 | Classes : modèle et effets | [classes-modele.puml](classes-modele.puml) | #6 |
 | Classes : moteur, IA et données | [classes-moteur.puml](classes-moteur.puml) | #6 |
-| Cas d'utilisation : vue d'ensemble | [cas-utilisation.puml](cas-utilisation.puml) | #5 |
-| Cas d'utilisation : combat contre l'IA | [cu-combat-ia.puml](cu-combat-ia.puml) | #5 |
-| Cas d'utilisation : combat en ligne (bonus) | [cu-combat-en-ligne.puml](cu-combat-en-ligne.puml) | #5 |
+| Cas d'utilisation : vue d'ensemble | [cas-utilisation.puml](cas-utilisation.puml) | #30 |
+| Cas d'utilisation : combat contre l'IA | [cu-combat-ia.puml](cu-combat-ia.puml) | #30 |
+| Cas d'utilisation : combat en LAN | [cu-combat-en-ligne.puml](cu-combat-en-ligne.puml) | #30 |
 | Cas d'utilisation : Mondex | [cu-mondex.puml](cu-mondex.puml) | #5 |
 | Cas d'utilisation : Ajouter un Mon | [cu-ajouter-un-mon.puml](cu-ajouter-un-mon.puml) | #5 |
-| Navigation : menu principal | [navigation.puml](navigation.puml) | #5 |
-| Navigation : combat contre l'IA | [combat-ia.puml](combat-ia.puml) | #5 |
-| Navigation : combat en ligne (bonus) | [combat-en-ligne.puml](combat-en-ligne.puml) | #5 |
-| Navigation : écran de combat | [combat.puml](combat.puml) | #5 |
+| Navigation : menu principal | [navigation.puml](navigation.puml) | #30 |
+| Navigation : combat contre l'IA | [combat-ia.puml](combat-ia.puml) | #30 |
+| Navigation : combat en LAN | [combat-en-ligne.puml](combat-en-ligne.puml) | #30 |
+| Navigation : écran de combat | [combat.puml](combat.puml) | #30 |
 | Navigation : Mondex | [mondex.puml](mondex.puml) | #5 |
 | Classes du Mondex | [classes-mondex.puml](classes-mondex.puml) | #45 |
 | Navigation : Ajouter un Mon | [ajouter-un-mon.puml](ajouter-un-mon.puml) | #5 |

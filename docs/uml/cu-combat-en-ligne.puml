@@ -11,7 +11,7 @@ skinparam rectangle {
   BorderColor #3A4170
   BackgroundColor #FAFAFD
 }
-title Fakemon Arena · cas d'utilisation, combat en ligne, bonus (v1)
+title Fakemon Arena · cas d'utilisation, combat en LAN
 
 actor "Joueur" as joueur
 actor "Adversaire en ligne" as adv
@@ -29,6 +29,9 @@ rectangle "Jouer un combat en ligne" {
   usecase "Choisir ses 6 fakemon" as choisir6
   usecase "Tirer les équipes" as tirer
   usecase "Préparer la partie\ndans le lobby" as lobby
+  usecase "Hôte : choisir le mode\naléatoire ou construit" as mode
+  usecase "Invité : se déclarer prêt" as pret
+  usecase "Annuler son choix\navant le verrouillage du tour" as annuler
   usecase "Rejoindre une partie" as rejoindre
   usecase "Héberger une partie" as heberger
   usecase "Se connecter\nà une partie" as connecter
@@ -39,6 +42,8 @@ jouerLigne ..> connecter : <<include>>
 connecter <|-- heberger
 connecter <|-- rejoindre
 jouerLigne ..> lobby : <<include>>
+lobby ..> mode : <<include>>
+lobby ..> pret : <<include>>
 jouerLigne <.. tirer : <<extend>>\nmode aléatoire
 jouerLigne <.. choisir6 : <<extend>>\nmode construit
 jouerLigne <.. premier : <<extend>>\nmode construit
@@ -47,6 +52,7 @@ jouerLigne ..> resultat : <<include>>
 tour <|-- attaquer
 tour <|-- changer
 tour <.. pause : <<extend>>\nÉchap
+tour <.. annuler : <<extend>>\nchoix adverse encore absent
 tour <.. ko : <<extend>>\nun mon tombe KO
 resultat <.. revanche : <<extend>>\nles deux cliquent\nsur Revanche
 jouerLigne -- adv
