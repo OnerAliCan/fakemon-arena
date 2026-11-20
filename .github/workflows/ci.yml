@@ -19,7 +19,7 @@ jobs:
       - name: Compiler et lancer les tests
         run: ./mvnw -B -ntp verify
       - name: Vérifier les animations et leur intégration JavaFX
-        run: xvfb-run -a ./mvnw -B -ntp -Dprism.order=sw -Dfakemon.ui.tests=true -Dtest=BattleAnimationsUiTest,BattleAttackEffectsUiTest,BattlePresentationUiTest,BattleBadgesUiTest,BattleTooltipsUiTest test
+        run: xvfb-run -a ./mvnw -B -ntp -Dprism.order=sw -Dfakemon.ui.tests=true -Dtest=AddSpeciesScreenUiTest,BattleAnimationsUiTest,BattleAttackEffectsUiTest,BattlePresentationUiTest,BattleBadgesUiTest,BattleTooltipsUiTest test
       - name: Publier le rapport de couverture
         if: always()
         uses: actions/upload-artifact@v4

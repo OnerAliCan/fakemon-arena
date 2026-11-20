@@ -13,7 +13,7 @@ state "Menu principal" as Menu
 state "Combat en LAN" as Ligne : voir combat-en-ligne.puml
 state "Combat contre l'IA" as IA : voir combat-ia.puml
 state "Mondex" as Mondex : voir mondex.puml
-state "Ajouter un Mon" as Ajouter : écran provisoire\nformulaire prévu dans #20
+state "Ajouter un Mon" as Ajouter : noms, sprites, cri, types, stats\nattaques, talent et crédits\nenregistrement dans le catalogue
 state "Options" as Options : volume de la musique\net des effets
 state "Crédits" as Credits
 

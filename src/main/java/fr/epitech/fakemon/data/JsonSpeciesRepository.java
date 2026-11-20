@@ -70,7 +70,8 @@ public class JsonSpeciesRepository implements SpeciesRepository {
 
     /**
      * Valide un Fakemon, copie ses sprites et son cri éventuel, puis écrit sa fiche JSON
-     * dans le dossier utilisateur. Le Fakemon rejoint le catalogue après l'enregistrement.
+     * dans le dossier utilisateur. Un chemin de dos vide utilise une copie miroir de la face.
+     * Le Fakemon rejoint le catalogue après l'enregistrement.
      *
      * @param species la fiche à ajouter, avec les chemins des fichiers source
      * @throws InvalidSpeciesException si la fiche est invalide ou si la sauvegarde échoue
@@ -86,7 +87,9 @@ public class JsonSpeciesRepository implements SpeciesRepository {
         validateSpecies(species);
 
         requireReadableFile(species.getFrontSprite(), originalName, "sprite de face");
-        requireReadableFile(species.getBackSprite(), originalName, "sprite de dos");
+        if (species.getBackSprite() != null && !species.getBackSprite().isBlank()) {
+            requireReadableFile(species.getBackSprite(), originalName, "sprite de dos");
+        }
 
         String cry = species.getCry();
         if (cry != null && !cry.isBlank()) {
@@ -230,7 +233,25 @@ public class JsonSpeciesRepository implements SpeciesRepository {
     private void copyAssets(Species species, Path assetFolder, JsonObject json) throws IOException {
         JsonObject sprites = new JsonObject();
         sprites.addProperty("front", copyAsset(species.getFrontSprite(), assetFolder, "front"));
-        sprites.addProperty("back", copyAsset(species.getBackSprite(), assetFolder, "back"));
+        String back = species.getBackSprite();
+        if (back == null || back.isBlank()) {
+            var front = javax.imageio.ImageIO.read(Path.of(species.getFrontSprite()).toFile());
+            if (front == null) {
+                throw new InvalidSpeciesException("Le sprite avant n'est pas une image lisible.");
+            }
+            var mirrored = new java.awt.image.BufferedImage(front.getWidth(), front.getHeight(),
+                    java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < front.getHeight(); y++) {
+                for (int x = 0; x < front.getWidth(); x++) {
+                    mirrored.setRGB(front.getWidth() - 1 - x, y, front.getRGB(x, y));
+                }
+            }
+            Path destination = assetFolder.resolve("back.png");
+            javax.imageio.ImageIO.write(mirrored, "png", destination.toFile());
+            sprites.addProperty("back", userFolder.relativize(destination).toString().replace('\\', '/'));
+        } else {
+            sprites.addProperty("back", copyAsset(back, assetFolder, "back"));
+        }
         json.add("sprites", sprites);
 
         String cry = species.getCry();
