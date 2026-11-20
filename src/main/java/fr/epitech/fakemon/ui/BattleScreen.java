@@ -1,7 +1,9 @@
 package fr.epitech.fakemon.ui;
 
+import java.net.URL;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.concurrent.ThreadLocalRandom;
 
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
 import fr.epitech.fakemon.core.api.BattleEngine;
@@ -91,9 +93,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         this.scenes = scenes;
         this.menu = menu;
         setPadding(new Insets(12));
-        var background = BattleScreen.class.getResource("/backgrounds/battle-grassland.png");
-        arena.setStyle("-fx-background-image: url('" + background.toExternalForm()
-                + "'); -fx-background-size: cover; -fx-background-position: center;");
+        if (network == null) {
+            setArenaBackground(BattleAssets.randomBackground(ThreadLocalRandom.current()));
+        }
         setFocusTraversable(true);
         pauseButton.setOnAction(event -> pause());
         teamButton.setOnAction(event -> showTeam(false));
@@ -146,6 +148,11 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             network.start(this::onEvent, this::networkChoiceRequired, this::networkChoiceStateChanged,
                     this::networkFailure);
         }
+    }
+
+    private void setArenaBackground(URL background) {
+        arena.setStyle("-fx-background-image: url('" + background.toExternalForm()
+                + "'); -fx-background-size: cover; -fx-background-position: center;");
     }
 
     private BattleState state() {
@@ -240,6 +247,9 @@ public final class BattleScreen extends BorderPane implements BattleListener {
      */
     @Override
     public void onEvent(BattleEvent event) {
+        if (network != null && arena.getStyle().isEmpty()) {
+            setArenaBackground(network.getBackground());
+        }
         if (event instanceof FakemonEnteredEvent entered) {
             Fakemon mon = entered.getFakemon();
             int hp = mon.getCurrentHp();

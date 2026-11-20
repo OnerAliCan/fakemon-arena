@@ -17,8 +17,10 @@ import fr.epitech.fakemon.net.NetworkTeamCodec;
 import fr.epitech.fakemon.data.JsonSpeciesRepository;
 import fr.epitech.fakemon.data.SpeciesFactory;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import javafx.application.Platform;
 
@@ -28,6 +30,7 @@ final class NetworkBattleController implements AutoCloseable {
     private final NetworkGuestSession guest;
     private final Side localSide;
     private NetworkBattleState state;
+    private URL background;
     private NetworkEventCodec events;
     private Consumer<BattleEvent> onEvent;
     private Consumer<Boolean> onChoice;
@@ -68,6 +71,11 @@ final class NetworkBattleController implements AutoCloseable {
 
     BattleState getState() {
         return state;
+    }
+
+    /** Donne le décor choisi à partir de la graine visuelle partagée par l'hôte. */
+    URL getBackground() {
+        return background;
     }
 
     /** Rouvre la préparation avec le même adversaire lorsque l'ancien lecteur a libéré la connexion. */
@@ -163,6 +171,9 @@ final class NetworkBattleController implements AutoCloseable {
                 if (state != null) {
                     throw new IllegalStateException("Le combat a déjà été initialisé.");
                 }
+                var seed = message.getPayload().get("visualSeed");
+                background = BattleAssets.randomBackground(seed == null
+                        ? ThreadLocalRandom.current() : new Random(seed.getAsLong()));
                 NetworkTeamCodec teams = new NetworkTeamCodec();
                 var hostTeam = teams.decode(new NetworkMessage("TEAM",
                         message.getPayload().getAsJsonObject("hostTeam")));

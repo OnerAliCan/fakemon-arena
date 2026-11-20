@@ -37,6 +37,9 @@ class BattleBadgesUiTest {
                 var scenes = new SceneManager(new Scene(new StackPane(), 960, 540));
                 var screen = new BattleScreen(scenes, setup, () -> {});
                 screen.applyCss();
+                var arena = screen.getCenter();
+                String backgroundStyle = arena.getStyle();
+                assertTrue(backgroundStyle.contains("/backgrounds/battle-"));
                 var render = BattleScreen.class.getDeclaredMethod("render", BattleEvent.class);
                 render.setAccessible(true);
                 var next = BattleScreen.class.getDeclaredMethod("renderNext");
@@ -58,6 +61,7 @@ class BattleBadgesUiTest {
                 next.invoke(screen);
                 assertFalse(screen.lookup("#player-activation").isVisible());
                 assertFalse(screen.lookup("#opponent-activation").isVisible());
+                assertEquals(backgroundStyle, arena.getStyle());
                 done.complete(null);
             } catch (Throwable error) {
                 done.completeExceptionally(error);
