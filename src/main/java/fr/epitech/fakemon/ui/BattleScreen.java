@@ -65,8 +65,6 @@ public final class BattleScreen extends BorderPane implements BattleListener {
     private final SceneManager scenes;
     private final Runnable menu;
     private final BattleMusic music;
-    private final Deque<Runnable> events = new ArrayDeque<>();
-    private final PauseTransition eventDelay = new PauseTransition(Duration.millis(110));
     private final BattleEventQueue events = new BattleEventQueue(this::present, this::presentationFinished);
     private Duration eventDuration = Duration.millis(110);
     private Animation pendingAnimation;
@@ -153,8 +151,6 @@ public final class BattleScreen extends BorderPane implements BattleListener {
         sceneProperty().addListener((property, previous, current) -> {
             if (current == null) {
                 music.close();
-                eventDelay.stop();
-                events.clear();
                 closed = true;
                 stopPresentation();
                 if (network != null && view != View.FINISHED) {
