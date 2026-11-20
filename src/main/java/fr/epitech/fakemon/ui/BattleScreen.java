@@ -481,7 +481,7 @@ public final class BattleScreen extends BorderPane implements BattleListener {
             this.mon = mon;
             Label name = new Label(BattleScreen.name(mon));
             name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
-            getChildren().setAll(name, new Label("Types : " + mon.getSpecies().getTypes()),
+            getChildren().setAll(name, TypeBadges.row(mon.getSpecies().getTypes()),
                     heldItem, status, bar, hp, BattleAssets.sprite(mon.getSpecies(), back, 104), activation);
             status(statusType);
             health(currentHp, mon.getMaxHp());
