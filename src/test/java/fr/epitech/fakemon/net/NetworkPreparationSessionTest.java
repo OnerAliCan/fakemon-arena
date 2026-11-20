@@ -1,17 +1,24 @@
 package fr.epitech.fakemon.net;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import fr.epitech.fakemon.core.api.BattleMode;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 /** Vérifie la préparation sur de vrais sockets, avant le transfert au protocole de combat. */
@@ -107,6 +114,96 @@ class NetworkPreparationSessionTest {
         }
     }
 
+    @Test
+    void hostDepartureIsDetectedBeforeTheGuestClicksReady() throws Exception {
+        try (Link link = new Link()) {
+            var failure = new CompletableFuture<IOException>();
+            link.guest.startMonitoring(failure::complete);
+            link.hostConnection.close();
+            assertInstanceOf(EOFException.class, failure.get(2, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    void guestDepartureIsDetectedAfterReadinessWhileTheHostIsIdle() throws Exception {
+        try (Link link = new Link()) {
+            var failure = new CompletableFuture<IOException>();
+            link.host.startMonitoring(failure::complete);
+            link.guest.ready();
+            link.host.awaitReady();
+            link.guestConnection.close();
+            assertInstanceOf(EOFException.class, failure.get(2, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    void departuresAreDetectedThroughoutConstructedSelection() throws Exception {
+        try (Link link = new Link()) {
+            var failure = new CompletableFuture<IOException>();
+            link.guest.startMonitoring(failure::complete);
+            link.prepare(BattleMode.CONSTRUCTED);
+            link.hostConnection.close();
+            assertInstanceOf(EOFException.class, failure.get(2, TimeUnit.SECONDS));
+        }
+        try (Link link = new Link()) {
+            var failure = new CompletableFuture<IOException>();
+            link.host.startMonitoring(failure::complete);
+            link.prepare(BattleMode.CONSTRUCTED);
+            link.guest.sendSelection(NAMES);
+            assertEquals(NAMES, link.host.receiveSelection());
+            link.guestConnection.close();
+            assertInstanceOf(EOFException.class, failure.get(2, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    void handoverStopsBothReadersBeforeTheFirstBattleMessages() throws Exception {
+        for (BattleMode mode : BattleMode.values()) {
+            try (Link link = new Link(); var worker = Executors.newSingleThreadExecutor()) {
+                var hostFailure = new CompletableFuture<IOException>();
+                var guestFailure = new CompletableFuture<IOException>();
+                link.host.startMonitoring(hostFailure::complete);
+                link.guest.startMonitoring(guestFailure::complete);
+                link.prepare(mode);
+                if (mode == BattleMode.CONSTRUCTED) {
+                    assertThrows(IllegalStateException.class, link.host::finish);
+                    link.guest.sendSelection(NAMES);
+                    assertEquals(NAMES, link.host.receiveSelection());
+                }
+                var guestFinished = worker.submit(() -> {
+                    link.guest.finish();
+                    return null;
+                });
+                link.host.finish();
+                link.hostConnection.send(new NetworkMessage("BATTLE_START", new JsonObject()));
+                guestFinished.get(2, TimeUnit.SECONDS);
+                assertEquals("BATTLE_START", link.guestConnection.receive().getType());
+                link.guestConnection.send(new NetworkMessage("ACTION", new JsonObject()));
+                assertEquals("ACTION", link.hostConnection.receive().getType());
+                assertFalse(hostFailure.isDone());
+                assertFalse(guestFailure.isDone());
+                assertThrows(IllegalStateException.class, link.host::finish);
+            }
+        }
+    }
+
+    @Test
+    void localCloseInterruptsAWaitingConsumerWithoutReportingAPeerDeparture() throws Exception {
+        try (Link link = new Link(); var worker = Executors.newSingleThreadExecutor()) {
+            var failure = new CompletableFuture<IOException>();
+            link.host.startMonitoring(failure::complete);
+            var waiting = worker.submit(() -> {
+                link.host.awaitReady();
+                return null;
+            });
+            link.host.close();
+            ExecutionException interrupted = assertThrows(ExecutionException.class,
+                    () -> waiting.get(2, TimeUnit.SECONDS));
+            assertInstanceOf(IOException.class, interrupted.getCause());
+            assertFalse(failure.isDone());
+        }
+    }
+
     private static JsonArray array(String... values) {
         JsonArray array = new JsonArray();
         for (String value : values) {
@@ -143,7 +240,7 @@ class NetworkPreparationSessionTest {
 
         @Override
         public void close() throws IOException {
-            try (hostConnection; guestConnection) { }
+            try (host; guest) { }
         }
     }
 }
