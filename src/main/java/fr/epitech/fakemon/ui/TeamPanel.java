@@ -62,7 +62,7 @@ final class TeamPanel extends VBox {
         }
         Label name = lightLabel(member.getSpecies().getFrenchName());
         name.setStyle("-fx-text-fill: #fff5dd; -fx-font-weight: bold;");
-        VBox identity = new VBox(3, name, lightLabel(member.getSpecies().getTypes().toString()));
+        VBox identity = new VBox(3, name, TypeBadges.row(member.getSpecies().getTypes()));
         if (member.getStatus() != null) {
             identity.getChildren().add(lightLabel(member.getStatus().getType().getDisplayName()));
         }

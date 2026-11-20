@@ -71,7 +71,7 @@ public class TeamPreviewScreen extends BorderPane {
         ImageView spriteView = BattleAssets.sprite(species, false, 48);
         Label frenchName = new Label(species.getFrenchName());
         frenchName.setStyle("-fx-font-weight: bold;");
-        VBox memberInfo = new VBox(4, frenchName, new Label("Types : " + species.getTypes()));
+        VBox memberInfo = new VBox(4, frenchName, TypeBadges.row(species.getTypes()));
         HBox memberRow = new HBox(12, spriteView, memberInfo);
         memberRow.setAlignment(Pos.CENTER_LEFT);
         memberRow.setMinHeight(48);

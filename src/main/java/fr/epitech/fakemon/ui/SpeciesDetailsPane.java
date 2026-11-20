@@ -3,7 +3,6 @@ package fr.epitech.fakemon.ui;
 import fr.epitech.fakemon.core.model.Species;
 import java.text.NumberFormat;
 import java.util.Locale;
-import java.util.stream.Collectors;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
@@ -36,7 +35,7 @@ final class SpeciesDetailsPane extends ScrollPane {
         name.setWrapText(true);
         content.getChildren().addAll(name, text("Nom d'origine — " + species.getOriginalName()),
                 BattleAssets.sprite(species, false, 128),
-                text("Types — " + species.getTypes().stream().map(Enum::name).collect(Collectors.joining(" / "))));
+                TypeBadges.row(species.getTypes()));
 
         var stats = species.getStats();
         NumberFormat numbers = NumberFormat.getNumberInstance(Locale.FRANCE);
