@@ -74,6 +74,7 @@ final class MondexScreen extends BorderPane {
         setCenter(list);
 
         back.setOnAction(event -> goBack());
+        MenuSounds.action(back, MenuSounds.Sound.NONE);
         setBottom(back);
         BorderPane.setMargin(back, new Insets(12, 0, 0, 0));
         addEventFilter(KeyEvent.KEY_PRESSED, event -> {
@@ -85,6 +86,7 @@ final class MondexScreen extends BorderPane {
     }
 
     private void showDetails(Species species) {
+        MenuSounds.play(this, MenuSounds.Sound.OPEN);
         showingDetails = true;
         title.setText("Détails du Fakemon");
         back.setText("Retour au Mondex");
@@ -93,6 +95,7 @@ final class MondexScreen extends BorderPane {
     }
 
     private void goBack() {
+        MenuSounds.play(this, MenuSounds.Sound.CLOSE);
         if (showingDetails) {
             showingDetails = false;
             title.setText("Mondex");

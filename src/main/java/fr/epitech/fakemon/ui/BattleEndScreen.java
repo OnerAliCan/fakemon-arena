@@ -56,9 +56,10 @@ public final class BattleEndScreen extends VBox {
             teamRow.getChildren().add(member);
         }
         Button menuButton = new Button("Menu");
+        MenuSounds.action(menuButton, MenuSounds.Sound.CLOSE);
         menuButton.setOnAction(event -> menu.run());
         if (replay != null) {
-            offerReplay(replay);
+            addReplay(replay, MenuSounds.Sound.NONE);
         }
         actions.getChildren().add(menuButton);
         actions.setAlignment(Pos.CENTER);
@@ -71,7 +72,12 @@ public final class BattleEndScreen extends VBox {
 
     /** Ajoute une proposition de revanche et empêche les demandes répétées. */
     void offerReplay(Runnable replay) {
+        addReplay(replay, MenuSounds.Sound.OPEN);
+    }
+
+    private void addReplay(Runnable replay, MenuSounds.Sound sound) {
         Button replayButton = new Button("Revanche");
+        MenuSounds.action(replayButton, sound);
         replayButton.setOnAction(event -> {
             replayButton.setDisable(true);
             replayStatus.setText("Préparation de la revanche…");

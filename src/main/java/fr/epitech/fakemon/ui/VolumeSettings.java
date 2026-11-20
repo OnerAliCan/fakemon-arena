@@ -23,7 +23,7 @@ final class VolumeSettings {
     }
 
     /** Ouvre le même réglage depuis les Options et la pause. */
-    void show(Window owner) {
+    void show(Window owner, MenuSounds sounds) {
         Dialog<Void> dialog = new Dialog<>();
         dialog.initOwner(owner);
         dialog.setTitle("Volume");
@@ -32,7 +32,11 @@ final class VolumeSettings {
         dialog.getDialogPane().setContent(new VBox(8, new Label("Musique"), musicSlider,
                 new Label("Effets sonores"), effectsSlider));
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        MenuSounds.action((javafx.scene.control.ButtonBase) dialog.getDialogPane().lookupButton(ButtonType.CLOSE),
+                MenuSounds.Sound.NONE);
+        dialog.setOnShown(event -> sounds.install(dialog.getDialogPane().getScene()));
         dialog.setOnHidden(event -> {
+            sounds.play(MenuSounds.Sound.CLOSE);
             musicSlider.valueProperty().unbindBidirectional(music);
             effectsSlider.valueProperty().unbindBidirectional(effects);
         });

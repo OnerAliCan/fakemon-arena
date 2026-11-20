@@ -66,6 +66,8 @@ final class NetworkLobbyScreen extends VBox implements AutoCloseable {
         hostAddresses.setMaxWidth(440);
         hostAddresses.setAccessibleText("Adresses IPv4 de ce PC à saisir sur le PC invité");
         Button back = new Button("Retour au menu principal");
+        MenuSounds.action(back, MenuSounds.Sound.CLOSE);
+        MenuSounds.action(cancelButton, MenuSounds.Sound.CLOSE);
         HBox buttons = new HBox(12, hostButton, joinButton);
         buttons.setAlignment(Pos.CENTER);
         getChildren().addAll(new Label("Combat en LAN"), address, buttons, status, hostAddresses, cancelButton, back);
@@ -81,6 +83,7 @@ final class NetworkLobbyScreen extends VBox implements AutoCloseable {
         back.setOnAction(event -> returnToMenu());
         setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
+                MenuSounds.play(this, MenuSounds.Sound.CLOSE);
                 if (busy) {
                     cancel();
                 } else {

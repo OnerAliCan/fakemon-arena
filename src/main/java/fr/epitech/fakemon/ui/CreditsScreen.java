@@ -33,6 +33,7 @@ final class CreditsScreen extends BorderPane {
         setStyle("-fx-background-color: #19233a;");
         Label title = label("Crédits", LIGHT + "-fx-font-size: 28px; -fx-font-weight: bold;");
         Button returnButton = new Button("Retour au menu");
+        MenuSounds.action(returnButton, MenuSounds.Sound.CLOSE);
         returnButton.setStyle("-fx-base: #f6c443;");
         returnButton.setOnAction(event -> back.run());
         HBox header = new HBox(16, title, returnButton);
@@ -50,7 +51,14 @@ final class CreditsScreen extends BorderPane {
         appendSpriteCredits(content, openLink);
         content.getChildren().addAll(
                 section("Musiques"),
-                label("Aucune piste musicale n’est incluse dans cette version.", MUTED),
+                link("Musique de combat : PanicAce! — Soundtrack Pokemon battle theme",
+                        "https://panicace.itch.io/soundtrack-pokemon-theme-battle", openLink),
+                label("Composition originale proposée en utilisation gratuite par son auteur.", MUTED),
+                section("Effets sonores"),
+                link("JRPG Style UI Sounds — KillaMaaki",
+                        "https://opengameart.org/content/jrpg-style-ui-sounds", openLink),
+                link("Licence Creative Commons Attribution 3.0",
+                        "https://creativecommons.org/licenses/by/3.0/", openLink),
                 section("Outils et remerciements"),
                 label("Java, JavaFX et Maven. Merci aux artistes de la communauté Mongratis.", LIGHT));
         content.setPadding(new Insets(10, 14, 16, 14));
@@ -64,6 +72,7 @@ final class CreditsScreen extends BorderPane {
         addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 event.consume();
+                MenuSounds.play(this, MenuSounds.Sound.CLOSE);
                 back.run();
             }
         });

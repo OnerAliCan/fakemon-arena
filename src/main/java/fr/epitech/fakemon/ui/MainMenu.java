@@ -30,6 +30,10 @@ public class MainMenu extends VBox {
         Button optionsButton = new Button("Options");
         Button creditsButton = new Button("Crédits");
         Button quitButton = new Button("Quitter");
+        for (Button button : new Button[] {combatOnlineButton, combatButton, mondexButton, addMon,
+                optionsButton, creditsButton}) {
+            MenuSounds.action(button, MenuSounds.Sound.OPEN);
+        }
         getChildren().addAll(new Label(App.TITLE), combatOnlineButton, combatButton, mondexButton, addMon,
                 optionsButton, creditsButton,
                 quitButton);
@@ -48,12 +52,15 @@ public class MainMenu extends VBox {
             Runnable menu = () -> sceneManager.show(this);
             var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
             Button constructed = new Button("Combat construit");
+            MenuSounds.action(constructed, MenuSounds.Sound.OPEN);
             constructed.setOnAction(click -> sceneManager.show(new TeamSelectionScreen(
                     roster, sceneManager, () -> sceneManager.show(modes), menu)));
             Button random = new Button("Combat aléatoire");
+            MenuSounds.action(random, MenuSounds.Sound.NONE);
             random.setOnAction(click -> sceneManager.show(new BattleScreen(
                     sceneManager, BattleSetup.random(roster, new java.util.Random()), menu)));
             Button back = new Button("Retour au menu principal");
+            MenuSounds.action(back, MenuSounds.Sound.CLOSE);
             back.setOnAction(click -> menu.run());
             modes.getChildren().addAll(new Label("Combat contre l’IA"), constructed, random, back);
             sceneManager.show(modes);
@@ -76,6 +83,7 @@ public class MainMenu extends VBox {
         VBox addMonMenu = new VBox(15);
         addMonMenu.setAlignment(Pos.CENTER);
         Button addMonBackButton = new Button("Retour");
+        MenuSounds.action(addMonBackButton, MenuSounds.Sound.CLOSE);
         addMonMenu.getChildren().addAll(new Label("Ajouter un Mon"), addMonBackButton);
 
         addMon.setOnAction(event -> {

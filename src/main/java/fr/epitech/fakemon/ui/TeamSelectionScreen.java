@@ -32,6 +32,7 @@ final class TeamSelectionScreen extends BorderPane {
     TeamSelectionScreen(SpeciesRepository roster, SceneManager scenes, Runnable back, Runnable menu) {
         this(roster, back, selected -> scenes.show(new BattleScreen(scenes,
                 BattleSetup.constructed(roster, selected, new Random()), menu)));
+        MenuSounds.action(confirm, MenuSounds.Sound.NONE);
     }
 
     /** Réutilise la sélection du catalogue pour une préparation locale ou réseau. */
@@ -72,10 +73,12 @@ final class TeamSelectionScreen extends BorderPane {
         setCenter(scroll);
 
         confirm.setStyle("-fx-base: #f6c443; -fx-font-weight: bold;");
+        MenuSounds.action(confirm, MenuSounds.Sound.OPEN);
         confirm.setOnAction(event -> onConfirm.accept(List.copyOf(selected)));
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Button backButton = new Button("Retour");
+        MenuSounds.action(backButton, MenuSounds.Sound.CLOSE);
         backButton.setOnAction(event -> back.run());
         var actions = new HBox(12, backButton, spacer, confirm);
         actions.setAlignment(Pos.CENTER_LEFT);
