@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Locale;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
@@ -36,30 +38,54 @@ final class TypeBadges {
         };
     }
 
-    static Label badge(Type type) {
-        String resource = "/icons/types/" + type.name().toLowerCase(Locale.ROOT) + ".svg";
-        try (var stream = TypeBadges.class.getResourceAsStream(resource)) {
-            if (stream == null) {
-                throw new IllegalStateException("Icône de type absente : " + resource);
+    private record Symbol(String color, String drawing) { }
+
+    private static final Map<Type, Symbol> SYMBOLS = loadSymbols();
+
+    private static Map<Type, Symbol> loadSymbols() {
+        Map<Type, Symbol> symbols = new EnumMap<>(Type.class);
+        for (Type type : Type.values()) {
+            String resource = "/icons/types/" + type.name().toLowerCase(Locale.ROOT) + ".svg";
+            try (var stream = TypeBadges.class.getResourceAsStream(resource)) {
+                if (stream == null) {
+                    throw new IllegalStateException("Icône de type absente : " + resource);
+                }
+                var path = PATH.matcher(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
+                if (!path.find()) {
+                    throw new IllegalStateException("Icône de type invalide : " + resource);
+                }
+                symbols.put(type, new Symbol(path.group(1), path.group(2)));
+            } catch (IOException error) {
+                throw new IllegalStateException("Lecture impossible : " + resource, error);
             }
-            var path = PATH.matcher(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
-            if (!path.find()) {
-                throw new IllegalStateException("Icône de type invalide : " + resource);
-            }
-            SVGPath icon = new SVGPath();
-            icon.setContent(path.group(2));
-            icon.setFill(Color.web(path.group(1)));
-            icon.setFillRule(FillRule.EVEN_ODD);
-            icon.setAccessibleRole(AccessibleRole.IMAGE_VIEW);
-            icon.setAccessibleText(name(type));
-            Label badge = new Label(name(type), icon);
-            badge.setStyle("-fx-background-color: #f5f5f5; -fx-text-fill: #222222; "
-                    + "-fx-padding: 3 7; -fx-background-radius: 6; -fx-font-size: 12px;");
-            badge.setAccessibleText("Type " + name(type));
-            return badge;
-        } catch (IOException error) {
-            throw new IllegalStateException("Lecture impossible : " + resource, error);
         }
+        return Map.copyOf(symbols);
+    }
+
+    static Color color(Type type) {
+        return Color.web(SYMBOLS.get(type).color());
+    }
+
+    static String colorCss(Type type) {
+        return SYMBOLS.get(type).color();
+    }
+
+    static SVGPath icon(Type type) {
+        SVGPath icon = new SVGPath();
+        icon.setContent(SYMBOLS.get(type).drawing());
+        icon.setFill(color(type));
+        icon.setFillRule(FillRule.EVEN_ODD);
+        icon.setAccessibleRole(AccessibleRole.IMAGE_VIEW);
+        icon.setAccessibleText(name(type));
+        return icon;
+    }
+
+    static Label badge(Type type) {
+        Label badge = new Label(name(type), icon(type));
+        badge.setStyle("-fx-background-color: #f5f5f5; -fx-text-fill: #222222; "
+                + "-fx-padding: 3 7; -fx-background-radius: 6; -fx-font-size: 12px;");
+        badge.setAccessibleText("Type " + name(type));
+        return badge;
     }
 
     static FlowPane row(Collection<Type> types) {

@@ -27,7 +27,9 @@ package "ui · écrans JavaFX" {
   rectangle "Menus\ncombat aléatoire ou construit" as Menus <<devB>>
   rectangle "Écran de combat\net panneau d'équipe" as Combat <<devB>>
   rectangle "Infobulles\nBattleTooltips" as Details <<devB>>
-  rectangle "Animations et son" as Son <<devB>>
+  rectangle "File de présentation\nBattleEventQueue" as Queue <<devB>>
+  rectangle "Animations\nBattleAnimations, BattleAttackEffects" as Anim <<devB>>
+  rectangle "Son" as Son <<devB>>
   rectangle "Mondex" as Mondex <<devB>>
   rectangle "Ajouter un Mon\n(le dashboard)" as Dashboard <<devB>>
 }
@@ -74,6 +76,9 @@ note right of Details
   Objets, talents et attaques adverses
   seulement après leur révélation.
 end note
+Combat --> Queue : événements capturés dans l’ordre
+Queue --> Anim : une présentation à la fois
+Anim --> Queue : onFinished, puis événement suivant
 IListener --> Son : onEvent
 Mondex --> IRepo : findAll
 Dashboard --> IRepo : add

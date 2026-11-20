@@ -157,7 +157,12 @@ else les deux Fakemon actifs sont debout
 end
 Arbitre --> Ecran : fin de submitAction
 deactivate Arbitre
-Ecran -> Ecran : afficher les événements dans l'ordre
+loop chaque événement capturé
+  Ecran -> Ecran : BattleEventQueue.start()
+  Ecran -> Ecran : Timeline PV / transitions impact, KO, sortie et entrée
+  ... attendre la fin de l'animation ...
+  Ecran -> Ecran : onFinished : autoriser l'événement suivant
+end
 Ecran --> Joueur : prochain choix ou bilan du combat
 
 legend bottom left
