@@ -80,17 +80,10 @@ public class MainMenu extends VBox {
             credits.requestFocus();
         });
 
-        VBox addMonMenu = new VBox(15);
-        addMonMenu.setAlignment(Pos.CENTER);
-        Button addMonBackButton = new Button("Retour");
-        MenuSounds.action(addMonBackButton, MenuSounds.Sound.CLOSE);
-        addMonMenu.getChildren().addAll(new Label("Ajouter un Mon"), addMonBackButton);
-
         addMon.setOnAction(event -> {
-            sceneManager.show(addMonMenu);
-        });
-        addMonBackButton.setOnAction(event -> {
-            sceneManager.show(this);
+            var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
+            sceneManager.show(new AddSpeciesScreen(roster, sceneManager.effectsVolumePercent(),
+                    () -> sceneManager.show(this)));
         });
 
         quitButton.setOnAction(event -> {

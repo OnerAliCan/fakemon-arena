@@ -1,24 +1,48 @@
 @startuml ajouter-un-mon
 !pragma layout smetana
-title Fakemon Arena · Ajouter un Mon (v1)
 skinparam defaultFontName Segoe UI
-skinparam state {
-  BackgroundColor #FFF6D6
-  BorderColor #B8901A
-  ArrowColor #3A4170
+hide empty members
+title Fakemon Arena · ajout d'une espèce
+class MainMenu
+class AddSpeciesScreen {
+  - selectSprite(path, rear)
+  - selectCry(path)
+  - save()
+  - reset()
 }
-hide empty description
-
-state "Menu principal" as Menu
-state "Ajouter un Mon" as Fiche : fiche : noms, types, stats, talent,\nsprites, cri, attaques, designer
-state remplie <<choice>>
-state "Quitter sans enregistrer ?" as Confirmation : Oui\nNon
-
-Menu --> Fiche : Ajouter un Mon
-Fiche --> Fiche : Enregistrer :\nmessage de confirmation,\nfiche vidée
-Fiche --> remplie : Échap ou Retour
-remplie --> Menu : fiche vide
-remplie --> Confirmation : fiche commencée
-Confirmation --> Menu : Oui
-Confirmation --> Fiche : Non
+class SpeciesDraft {
+  ~ build(repository) : Species
+  ~ {static} availableMoves(repository)
+  ~ {static} matches(move, query)
+}
+class CryPreview {
+  ~ play(path)
+  + close()
+}
+class FileChooser
+class Species
+interface SpeciesRepository {
+  + findAll()
+  + add(species)
+}
+class JsonSpeciesRepository {
+  - copyAssets(species, folder, json)
+}
+class InvalidSpeciesException
+class "Dossier utilisateur\nJSON et médias copiés" as Files <<fichiers>>
+MainMenu --> AddSpeciesScreen : ouvre
+AddSpeciesScreen --> FileChooser : sprites et cri
+AddSpeciesScreen *-- CryPreview : écoute au volume partagé
+AddSpeciesScreen --> SpeciesDraft : valeurs saisies
+SpeciesDraft --> Species : construit la fiche
+SpeciesDraft --> SpeciesRepository : catalogue et numéro du Mondex
+AddSpeciesScreen --> SpeciesRepository : add(fiche)
+JsonSpeciesRepository ..|> SpeciesRepository
+JsonSpeciesRepository --> InvalidSpeciesException : validation ou échec de sauvegarde
+AddSpeciesScreen ..> InvalidSpeciesException : message sans effacer la saisie
+JsonSpeciesRepository --> Files : sprites, cri et dos miroir si absent
+note bottom of Files
+  Le Mondex et les équipes rechargent ce dépôt.
+  Une création réussie reste disponible après redémarrage.
+end note
 @enduml
