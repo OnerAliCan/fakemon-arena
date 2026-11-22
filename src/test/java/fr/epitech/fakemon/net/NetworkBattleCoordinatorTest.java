@@ -42,6 +42,21 @@ import org.junit.jupiter.params.provider.EnumSource;
 class NetworkBattleCoordinatorTest {
     @ParameterizedTest
     @EnumSource(BattleMode.class)
+    void bothPlayersReceiveTheSameVisualSeedAtTheStartOfTheBattle(BattleMode mode) throws Exception {
+        try (Session session = new Session(mode)) {
+            session.coordinator.start();
+            NetworkMessage hostStart = session.hostMessage();
+            NetworkMessage guestStart = session.remote.receive();
+            assertEquals("BATTLE_START", hostStart.getType());
+            assertEquals("BATTLE_START", guestStart.getType());
+            assertNotNull(hostStart.getPayload().get("visualSeed"));
+            assertEquals(hostStart.getPayload().get("visualSeed").getAsLong(),
+                    guestStart.getPayload().get("visualSeed").getAsLong());
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(BattleMode.class)
     void aFullBattleCanBeFollowedByPreparationAndAnotherBattleOnTheSameConnection(BattleMode mode) throws Exception {
         try (Session session = new Session(mode, true);
                 NetworkGuestSession firstGuest = automaticGuest(session.remote, session.failures, true)) {
