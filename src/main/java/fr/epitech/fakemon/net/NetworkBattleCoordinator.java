@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -128,7 +129,7 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
         return released.copy();
     }
 
-    /** Envoie les équipes initiales, démarre le moteur et lance la lecture des réponses. */
+    /** Envoie les équipes et une graine visuelle indépendante, puis démarre le moteur et la lecture des réponses. */
     public void start() {
         if (closed.get() || !started.compareAndSet(false, true)) {
             throw new IllegalStateException("Le combat est déjà démarré ou fermé.");
@@ -141,6 +142,7 @@ public final class NetworkBattleCoordinator implements AutoCloseable {
                 payload.add("hostTeam", teams.encode(hostTeam).getPayload());
                 payload.add("guestTeam", teams.encode(guestTeam).getPayload());
                 payload.addProperty("mode", mode.name());
+                payload.addProperty("visualSeed", ThreadLocalRandom.current().nextLong());
                 synchronized (publishing) {
                     if (closed.get()) {
                         return;

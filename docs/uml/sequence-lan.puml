@@ -13,9 +13,11 @@ participant "NetworkBattleController invité" as GuestController
 participant "BattleScreen invité" as GuestUI
 actor Invité
 
-Coordinator -> Guest : BATTLE_START avec les deux équipes
-Coordinator -> HostController : BATTLE_START
+Coordinator -> Guest : BATTLE_START avec équipes et graine visuelle
+Coordinator -> HostController : BATTLE_START avec la même graine visuelle
 Guest -> GuestController : BATTLE_START
+HostController -> HostUI : afficher le décor choisi avec la graine visuelle
+GuestController -> GuestUI : afficher le même décor
 Coordinator -> HostController : ACTION_REQUIRED, requestId hôte
 Coordinator -> Guest : ACTION_REQUIRED, requestId invité
 Guest -> GuestController : demande reçue

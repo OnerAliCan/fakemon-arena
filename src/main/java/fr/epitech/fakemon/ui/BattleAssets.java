@@ -1,14 +1,36 @@
 package fr.epitech.fakemon.ui;
 
+import java.net.URL;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Objects;
+import java.util.random.RandomGenerator;
 
 import fr.epitech.fakemon.core.model.Species;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-/** Charge les sprites du catalogue embarqué ou du dossier utilisateur. */
+/** Résout les décors et les médias du catalogue embarqué ou du dossier utilisateur. */
 final class BattleAssets {
+    private static final List<String> BACKGROUNDS = List.of(
+            "/backgrounds/battle-grassland.png",
+            "/backgrounds/battle-forest.png",
+            "/backgrounds/battle-beach.png",
+            "/backgrounds/battle-desert.png",
+            "/backgrounds/battle-snow.png");
+
     private BattleAssets() {}
+
+    /**
+     * Tire un décor parmi les cinq paysages embarqués, une fois au début du combat.
+     *
+     * @param random source de hasard visuel, distincte de celle du moteur
+     * @return l'adresse du décor choisi dans les ressources du jeu
+     */
+    static URL randomBackground(RandomGenerator random) {
+        String path = BACKGROUNDS.get(random.nextInt(BACKGROUNDS.size()));
+        return Objects.requireNonNull(BattleAssets.class.getResource(path), "Décor absent : " + path);
+    }
 
     static Path userFolder() {
         return Path.of(System.getProperty("user.home"), ".fakemon-arena");

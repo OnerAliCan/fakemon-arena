@@ -58,6 +58,9 @@ class BattleBadgesUiTest {
                     assertEquals(88, button.getHeight(), .001);
                     assertTrue(button.getStyle().contains(TypeBadges.colorCss(move.getType())));
                 }
+                var arena = screen.getCenter();
+                String backgroundStyle = arena.getStyle();
+                assertTrue(backgroundStyle.contains("/backgrounds/battle-"));
                 var render = BattleScreen.class.getDeclaredMethod("render", BattleEvent.class);
                 render.setAccessible(true);
                 for (Item item : Item.values()) {
@@ -81,6 +84,7 @@ class BattleBadgesUiTest {
                 idle.invoke(screen);
                 assertFalse(screen.lookup("#player-activation").isVisible());
                 assertFalse(screen.lookup("#opponent-activation").isVisible());
+                assertEquals(backgroundStyle, arena.getStyle());
             } finally {
                 scenes.show(new StackPane());
             }
