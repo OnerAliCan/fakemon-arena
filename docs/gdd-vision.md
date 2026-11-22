@@ -133,7 +133,7 @@ Toutes les maquettes sont à la taille de la fenêtre du jeu, **960 × 540**, av
 - Les designers des créatures de la collection Mongratis.
 - Les auteurs des musiques.
 - Les deux développeurs et leurs rôles, l'école et le projet.
-- Les outils utilisés : Java, JavaFX, jsfxr.
+- Les outils utilisés : Java et JavaFX.
 - Des remerciements, dont le texte reste à rédiger.
 
 ## 4. Direction artistique
@@ -172,15 +172,14 @@ Chaque type a sa couleur, utilisée sur les étiquettes, les boutons d'attaque e
 
 | Son | Quand | Source |
 |---|---|---|
-| **Musique du menu** | menus, Mondex, Ajouter un Mon, crédits | musique libre de droits (CC0 ou CC-BY), par exemple sur OpenGameArt |
-| **Musique de combat** | pendant le combat | idem |
-| **Jingles** | victoire, défaite | idem |
-| **Effets** | clic, attaque, super efficace, critique, attaque ratée, KO, soin, entrée en jeu | générés avec [jsfxr](https://sfxr.me) |
-| **Cris** | entrée en jeu, et en plus grave au KO | un cri par fakemon, généré avec jsfxr, moins d'une seconde |
+| **Musique de combat** | introduction jouée une fois, puis thème en boucle en solo et en LAN | [PanicAce!](https://panicace.itch.io/soundtrack-pokemon-theme-battle) |
+| **Effets de menu** | ouverture, retour, confirmation, curseur, lancement du combat et clic sur un bouton désactivé | [JRPG Style UI Sounds](https://opengameart.org/content/jrpg-style-ui-sounds) |
 
-- **Volume :** deux curseurs, musique et effets, dans les Options et dans la pause du combat, gardés d'une partie à l'autre.
-- **Dans le code :** `MediaPlayer` pour les musiques, `AudioClip` pour les effets et les cris (#28).
-- **Crédits :** chaque musique CC-BY est créditée dans le README et dans l'écran Crédits, avec son auteur et sa licence.
+- **Volume :** deux curseurs, musique et effets, accessibles depuis le menu et la pause du combat. Les réglages s’appliquent pendant la session.
+- **Crédits :** les sources et conditions d’utilisation figurent dans le README et l’écran Crédits.
+- **Cris personnalisés :** le joueur peut importer un fichier WAV ou MP3 dans Ajouter un Mon et l’écouter dans le formulaire ou le Mondex.
+
+Les cris du roster, la musique du menu, les jingles et les bruitages de combat sont hors du périmètre de la version finale.
 
 ## 6. Hors périmètre
 

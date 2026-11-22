@@ -116,7 +116,6 @@ les ajouts, mais l'écran de saisie **Ajouter un Mon** reste à livrer.
 - [#20](https://github.com/OnerAliCan/fakemon-arena/issues/20) : formulaire **Ajouter un Mon**.
 - [#16](https://github.com/OnerAliCan/fakemon-arena/issues/16) : icônes des types ; les sprites sont présents.
 - [#27](https://github.com/OnerAliCan/fakemon-arena/issues/27) : animations d'impact, de PV et de K.O.
-- [#28](https://github.com/OnerAliCan/fakemon-arena/issues/28) : musique du menu, bruitages et cris en combat.
 - [#66](https://github.com/OnerAliCan/fakemon-arena/issues/66) : infobulles détaillées en combat.
 
 ## Conception et crédits
@@ -147,7 +146,7 @@ Le volume se règle dans les options ou depuis la pause, en solo comme en LAN.
 sous licence [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
 Les six fichiers WAV sont utilisés sans modification : erreur sur bouton désactivé,
 ouverture de menu, lancement de combat, retour, confirmation et déplacement du curseur.
-Le volume des effets sonores est partagé avec les cris et se règle dans les options.
+Le volume des effets sonores se règle dans les options et s’applique aussi à l’écoute des cris personnalisés.
 
 ## Équipe
 
