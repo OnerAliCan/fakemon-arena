@@ -50,15 +50,20 @@ public class MainMenu extends VBox {
             VBox modes = new VBox(12);
             modes.setAlignment(Pos.CENTER);
             Runnable menu = () -> sceneManager.show(this);
-            var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
             Button constructed = new Button("Combat construit");
             MenuSounds.action(constructed, MenuSounds.Sound.OPEN);
-            constructed.setOnAction(click -> sceneManager.show(new TeamSelectionScreen(
-                    roster, sceneManager, () -> sceneManager.show(modes), menu)));
+            constructed.setOnAction(click -> {
+                var roster = new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder());
+                sceneManager.show(new TeamSelectionScreen(roster, sceneManager, () -> sceneManager.show(modes), menu));
+            });
             Button random = new Button("Combat aléatoire");
             MenuSounds.action(random, MenuSounds.Sound.NONE);
-            random.setOnAction(click -> sceneManager.show(new BattleScreen(
-                    sceneManager, BattleSetup.random(roster, new java.util.Random()), menu)));
+            random.setOnAction(click -> {
+                var setup = BattleSetup.soloRandom(
+                        () -> new JsonSpeciesRepository(new SpeciesFactory(), BattleAssets.userFolder()),
+                        System.getProperty("fakemon.demo.seed"));
+                sceneManager.show(new BattleScreen(sceneManager, setup, menu));
+            });
             Button back = new Button("Retour au menu principal");
             MenuSounds.action(back, MenuSounds.Sound.CLOSE);
             back.setOnAction(click -> menu.run());

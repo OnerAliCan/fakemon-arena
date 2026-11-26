@@ -17,7 +17,10 @@ import java.util.Random;
 
 import fr.epitech.fakemon.core.api.BattleEndedEvent;
 import fr.epitech.fakemon.core.api.BattleEvent;
+import fr.epitech.fakemon.core.api.Effectiveness;
+import fr.epitech.fakemon.core.api.EffectivenessEvent;
 import fr.epitech.fakemon.core.api.FakemonEnteredEvent;
+import fr.epitech.fakemon.core.api.FakemonFaintedEvent;
 import fr.epitech.fakemon.core.api.FakemonSelectionRequiredEvent;
 import fr.epitech.fakemon.core.api.HpLostEvent;
 import fr.epitech.fakemon.core.api.MoveUsedEvent;
@@ -35,6 +38,54 @@ import org.junit.jupiter.api.io.TempDir;
 
 class BattleSetupTest {
     @TempDir Path userFolder;
+
+    @Test
+    void seededSoloDemoReplaysTheDocumentedTurnsWithOnlyBundledSpecies() {
+        for (int attempt = 0; attempt < 2; attempt++) {
+            var match = BattleSetup.soloRandom(() -> {
+                throw new AssertionError("La démo doit ignorer le catalogue utilisateur.");
+            }, "31");
+            var engine = new DefaultBattleEngine();
+            List<BattleEvent> events = new ArrayList<>();
+            engine.addListener(events::add);
+            match.start(engine);
+            var lumax = engine.getActiveFakemon(Side.PLAYER);
+            var negatome = engine.getActiveFakemon(Side.OPPONENT);
+            assertEquals("Lumax", lumax.getSpecies().getFrenchName());
+            assertEquals("Négatôme", negatome.getSpecies().getFrenchName());
+            events.clear();
+            useMove(engine, lumax, "Lueur");
+            assertTrue(events.stream().anyMatch(event -> event instanceof EffectivenessEvent effectiveness
+                    && effectiveness.getEffectiveness() == Effectiveness.SUPER_EFFECTIVE));
+            assertTrue(lumax.isFainted());
+            assertEquals(48, negatome.getCurrentHp());
+
+            var nymphaline = match.player.getStandingFakemons().getFirst();
+            assertEquals("Nymphaline", nymphaline.getSpecies().getFrenchName());
+            engine.submitAction(new SendFakemon(nymphaline));
+            events.clear();
+            for (int turn = 0; turn < 3; turn++) {
+                useMove(engine, nymphaline, "Comète");
+            }
+            assertTrue(events.stream().anyMatch(event -> event instanceof FakemonFaintedEvent fainted
+                    && fainted.getSide() == Side.OPPONENT && fainted.getFakemon() == negatome));
+            assertEquals(20, nymphaline.getCurrentHp());
+        }
+    }
+
+    @Test
+    void unseededSoloUsesTheUserRoster() {
+        var roster = new JsonSpeciesRepository(new SpeciesFactory(), userFolder);
+        var match = BattleSetup.soloRandom(() -> roster, null);
+        assertTrue(match.player.getFakemons().stream().allMatch(mon -> roster.findAll().contains(mon.getSpecies())));
+        assertTrue(match.opponent.getFakemons().stream().allMatch(mon -> roster.findAll().contains(mon.getSpecies())));
+    }
+
+    private static void useMove(DefaultBattleEngine engine, Fakemon mon, String name) {
+        var move = mon.getMoves().stream().filter(candidate -> candidate.getName().equals(name)).findFirst()
+                .orElseThrow();
+        engine.submitAction(new UseMove(move));
+    }
 
     @Test
     void networkTeamsKeepBothSelectionsAndStartersEvenWithSharedSpecies() {
