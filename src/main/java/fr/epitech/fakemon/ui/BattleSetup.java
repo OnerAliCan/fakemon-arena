@@ -3,6 +3,7 @@ package fr.epitech.fakemon.ui;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 
 import fr.epitech.fakemon.core.ai.RandomOpponent;
 import fr.epitech.fakemon.core.api.BattleEngine;
@@ -13,6 +14,7 @@ import fr.epitech.fakemon.core.model.Fakemon;
 import fr.epitech.fakemon.core.model.Item;
 import fr.epitech.fakemon.core.model.Species;
 import fr.epitech.fakemon.core.model.Team;
+import fr.epitech.fakemon.data.BundledRoster;
 
 /** Prépare les équipes et conserve les choix nécessaires à une revanche. */
 final class BattleSetup {
@@ -25,6 +27,14 @@ final class BattleSetup {
 
     static BattleSetup random(SpeciesRepository roster, Random random) {
         return new BattleSetup(roster, random, BattleMode.RANDOM, null);
+    }
+
+    /** En démo, le catalogue embarqué et la graine fixent le scénario sur chaque poste. */
+    static BattleSetup soloRandom(Supplier<SpeciesRepository> userRoster, String demoSeed) {
+        if (demoSeed == null) {
+            return random(userRoster.get(), new Random());
+        }
+        return random(BundledRoster.load(), new Random(Long.parseLong(demoSeed)));
     }
 
     static BattleSetup constructed(SpeciesRepository roster, List<Species> selected, Random random) {
